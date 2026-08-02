@@ -1,0 +1,24 @@
+# .NET build output
+backend/**/bin/
+backend/**/obj/
+backend/**/logs/
+*.user
+.vs/
+
+# Test results
+backend/**/TestResults/
+
+# IDE
+.idea/
+*.suo
+
+# Environment files (never commit real secrets)
+.env
+.env.local
+backend/.env
+frontend/.env*.local
+!**/.env.example
+
+# OS files
+.DS_Store
+Thumbs.db

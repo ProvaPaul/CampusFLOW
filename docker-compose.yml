@@ -1,0 +1,45 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: campusflow-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - campusflow-mongo-data:/data/db
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: campusflow-backend
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      MongoDb__ConnectionString: mongodb://mongo:27017
+      MongoDb__DatabaseName: campusflow
+      Jwt__Key: ${JWT_KEY:-CHANGE_ME_TO_A_LONG_RANDOM_SECRET_AT_LEAST_32_CHARS}
+      Jwt__Issuer: CampusFlow.Api
+      Jwt__Audience: CampusFlow.Client
+      Jwt__ExpiryMinutes: "120"
+      Cors__AllowedOrigins__0: http://localhost:3000
+    ports:
+      - "5000:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:5000
+    container_name: campusflow-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+volumes:
+  campusflow-mongo-data:
