@@ -8,6 +8,7 @@ public record SubmissionDto(
     string AssignmentTitle,
     string StudentId,
     string StudentName,
+    string StudentEmail,
     string AnswerText,
     string? AttachmentUrl,
     DateTime SubmittedAt,
@@ -15,4 +16,5 @@ public record SubmissionDto(
     double? Marks,
     int MaxMarks,
     string? Feedback,
-    DateTime? GradedAt);
+    DateTime? GradedAt,
+    DateTime? UpdatedAt);

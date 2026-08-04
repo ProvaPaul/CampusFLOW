@@ -80,7 +80,7 @@ export default function NewAssignmentPage() {
     return (
       <Card>
         <CardBody>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             You are not yet assigned to teach any subject/class. Ask an Admin to assign you to a subject before
             creating assignments.
           </p>
@@ -122,12 +122,20 @@ export default function NewAssignmentPage() {
             <Input label="Deadline" type="datetime-local" error={errors.deadline?.message} {...register("deadline")} />
             <Input label="Max marks" type="number" min={1} error={errors.maxMarks?.message} {...register("maxMarks")} />
           </div>
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" className="h-4 w-4 rounded border-slate-300 text-indigo-600" {...register("allowResubmission")} />
+          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-300 text-indigo-600 dark:border-slate-600 dark:bg-slate-800"
+              {...register("allowResubmission")}
+            />
             Allow students to update their submission before the deadline
           </label>
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" className="h-4 w-4 rounded border-slate-300 text-indigo-600" {...register("publishImmediately")} />
+          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-300 text-indigo-600 dark:border-slate-600 dark:bg-slate-800"
+              {...register("publishImmediately")}
+            />
             Publish immediately (uncheck to save as draft)
           </label>
           <div className="flex justify-end gap-2 pt-2">

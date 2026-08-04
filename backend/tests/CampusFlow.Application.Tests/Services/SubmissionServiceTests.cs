@@ -204,4 +204,35 @@ public class SubmissionServiceTests
 
         await act.Should().ThrowAsync<ForbiddenException>();
     }
+
+    [Fact]
+    public async Task UpdateStatusAsync_ToGradedDirectly_ThrowsValidationAppException()
+    {
+        var assignment = SeedAssignment(DateTime.UtcNow.AddDays(3));
+        var studentSut = CreateSut(new FakeCurrentUserService(_student.Id, UserRole.Student));
+        var submission = await studentSut.SubmitAsync(assignment.Id, new CreateSubmissionRequest("Answer", null));
+
+        var teacherSut = CreateSut(new FakeCurrentUserService(_teacher.Id, UserRole.Teacher));
+        var act = () => teacherSut.UpdateStatusAsync(submission.Id, SubmissionStatus.Graded);
+
+        await act.Should().ThrowAsync<ValidationAppException>();
+    }
+
+    [Fact]
+    public async Task UpdateStatusAsync_AwayFromGraded_ClearsMarksAndFeedback()
+    {
+        var assignment = SeedAssignment(DateTime.UtcNow.AddDays(3), maxMarks: 100);
+        var studentSut = CreateSut(new FakeCurrentUserService(_student.Id, UserRole.Student));
+        var submission = await studentSut.SubmitAsync(assignment.Id, new CreateSubmissionRequest("Answer", null));
+
+        var teacherSut = CreateSut(new FakeCurrentUserService(_teacher.Id, UserRole.Teacher));
+        var graded = await teacherSut.GradeAsync(submission.Id, new GradeSubmissionRequest(88, "Solid work"));
+        graded.Status.Should().Be(SubmissionStatus.Graded);
+
+        var result = await teacherSut.UpdateStatusAsync(submission.Id, SubmissionStatus.NeedsRevision);
+
+        result.Status.Should().Be(SubmissionStatus.NeedsRevision);
+        result.Marks.Should().BeNull();
+        result.Feedback.Should().BeNull();
+    }
 }

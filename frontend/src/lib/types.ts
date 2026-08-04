@@ -79,6 +79,7 @@ export interface SubmissionDto {
   assignmentTitle: string;
   studentId: string;
   studentName: string;
+  studentEmail: string;
   answerText: string;
   attachmentUrl: string | null;
   submittedAt: string;
@@ -87,6 +88,7 @@ export interface SubmissionDto {
   maxMarks: number;
   feedback: string | null;
   gradedAt: string | null;
+  updatedAt: string | null;
 }
 
 export interface ApiErrorResponse {

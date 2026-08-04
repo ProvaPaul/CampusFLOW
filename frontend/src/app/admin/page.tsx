@@ -1,76 +1,72 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Users, Layers, BookOpen, ClipboardList } from "lucide-react";
-import { assignmentsApi, classesApi, subjectsApi, usersApi } from "@/lib/api";
-import { Card, CardBody } from "@/components/ui/Card";
+import { Users, Layers, BookOpen, ClipboardList, FileEdit, Megaphone, Inbox, CheckCircle2, UserCog } from "lucide-react";
+import { useAdminAnalytics } from "@/lib/use-admin-analytics";
+import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
-
-interface Stats {
-  users: number;
-  classes: number;
-  subjects: number;
-  assignments: number;
-  publishedAssignments: number;
-}
+import { StatCard, StatCardGrid } from "@/components/admin/StatCard";
+import { QuickInsights } from "@/components/admin/QuickInsights";
+import { ActivityFeed } from "@/components/admin/ActivityFeed";
 
 export default function AdminDashboardPage() {
-  const [stats, setStats] = useState<Stats | null>(null);
+  const { data, loading } = useAdminAnalytics();
 
-  useEffect(() => {
-    Promise.all([usersApi.getAll(), classesApi.getAll(), subjectsApi.getAll(), assignmentsApi.getAll()]).then(
-      ([users, classes, subjects, assignments]) => {
-        setStats({
-          users: users.length,
-          classes: classes.length,
-          subjects: subjects.length,
-          assignments: assignments.length,
-          publishedAssignments: assignments.filter((a) => a.status === "Published").length,
-        });
-      }
+  if (loading || !data) return <Spinner />;
+
+  const { global } = data;
+
+  if (global.totalClasses === 0) {
+    return (
+      <div>
+        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Admin Dashboard</h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Overview of the CampusFlow platform.</p>
+
+        <Card className="mt-6">
+          <CardBody>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Getting started</h2>
+            <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-400">
+              <li>Create classes/courses under the Classes tab.</li>
+              <li>Add subjects for each class under the Subjects tab.</li>
+              <li>Create teacher and student accounts under Users.</li>
+              <li>Assign teachers to subjects/classes under Teacher Assignments.</li>
+              <li>Teachers can then create assignments; students can submit and receive grades.</li>
+            </ol>
+          </CardBody>
+        </Card>
+      </div>
     );
-  }, []);
-
-  if (!stats) return <Spinner />;
-
-  const cards = [
-    { label: "Total Users", value: stats.users, icon: Users },
-    { label: "Classes / Courses", value: stats.classes, icon: Layers },
-    { label: "Subjects", value: stats.subjects, icon: BookOpen },
-    { label: "Assignments", value: `${stats.assignments} (${stats.publishedAssignments} published)`, icon: ClipboardList },
-  ];
+  }
 
   return (
-    <div>
-      <h1 className="text-xl font-bold text-slate-900">Admin Dashboard</h1>
-      <p className="mt-1 text-sm text-slate-500">Overview of the CampusFlow platform.</p>
-
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {cards.map((card) => (
-          <Card key={card.label}>
-            <CardBody className="flex items-center gap-4">
-              <div className="rounded-lg bg-indigo-50 p-2.5">
-                <card.icon className="h-5 w-5 text-indigo-600" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-slate-500">{card.label}</p>
-                <p className="text-lg font-semibold text-slate-900">{card.value}</p>
-              </div>
-            </CardBody>
-          </Card>
-        ))}
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Admin Dashboard</h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          A real-time snapshot of the institution — classes, subjects, staffing, and assignment activity.
+        </p>
       </div>
 
-      <Card className="mt-6">
+      <StatCardGrid>
+        <StatCard icon={Layers} label="Total Classes" value={global.totalClasses} />
+        <StatCard icon={BookOpen} label="Total Subjects" value={global.totalSubjects} />
+        <StatCard icon={UserCog} label="Total Teachers" value={global.totalTeachers} />
+        <StatCard icon={Users} label="Total Students" value={global.totalStudents} />
+        <StatCard icon={ClipboardList} label="Total Assignments" value={global.totalAssignments} />
+        <StatCard icon={FileEdit} label="Draft Assignments" value={global.draftAssignments} tone="warning" />
+        <StatCard icon={Megaphone} label="Published Assignments" value={global.publishedAssignments} tone="success" />
+        <StatCard icon={Inbox} label="Pending Reviews" value={global.pendingReviews} tone={global.pendingReviews > 0 ? "warning" : "default"} />
+        <StatCard icon={CheckCircle2} label="Completed Submissions" value={global.completedSubmissions} tone="success" />
+      </StatCardGrid>
+
+      <div>
+        <h2 className="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100">Quick Insights</h2>
+        <QuickInsights data={data.insights} />
+      </div>
+
+      <Card>
+        <CardHeader title="Recent Activity" description="The latest events across the platform." />
         <CardBody>
-          <h2 className="text-sm font-semibold text-slate-900">Getting started</h2>
-          <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-600">
-            <li>Create classes/courses under the Classes tab.</li>
-            <li>Add subjects for each class under the Subjects tab.</li>
-            <li>Create teacher and student accounts under Users.</li>
-            <li>Assign teachers to subjects/classes under Teacher Assignments.</li>
-            <li>Teachers can then create assignments; students can submit and receive grades.</li>
-          </ol>
+          <ActivityFeed events={data.activity} />
         </CardBody>
       </Card>
     </div>

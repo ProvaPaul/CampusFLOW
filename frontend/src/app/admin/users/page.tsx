@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, KeyRound } from "lucide-react";
 import { classesApi, usersApi } from "@/lib/api";
 import { getApiErrorMessage } from "@/lib/api-client";
 import type { ClassDto, UserDto, UserRole } from "@/lib/types";
@@ -30,13 +30,18 @@ const updateUserSchema = z.object({
   isActive: z.boolean(),
 });
 
+const resetPasswordSchema = z.object({
+  newPassword: z.string().min(6, "Password must be at least 6 characters"),
+});
+
 type CreateUserValues = z.infer<typeof createUserSchema>;
 type UpdateUserValues = z.infer<typeof updateUserSchema>;
+type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;
 
 const roleStyles: Record<UserRole, string> = {
-  Admin: "bg-purple-50 text-purple-700 ring-purple-300",
-  Teacher: "bg-blue-50 text-blue-700 ring-blue-300",
-  Student: "bg-emerald-50 text-emerald-700 ring-emerald-300",
+  Admin: "bg-purple-50 text-purple-700 ring-purple-300 dark:bg-purple-500/10 dark:text-purple-400 dark:ring-purple-800",
+  Teacher: "bg-blue-50 text-blue-700 ring-blue-300 dark:bg-blue-500/10 dark:text-blue-400 dark:ring-blue-800",
+  Student: "bg-emerald-50 text-emerald-700 ring-emerald-300 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-800",
 };
 
 export default function AdminUsersPage() {
@@ -44,6 +49,7 @@ export default function AdminUsersPage() {
   const [classes, setClasses] = useState<ClassDto[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserDto | null>(null);
+  const [resettingUser, setResettingUser] = useState<UserDto | null>(null);
 
   const load = async () => {
     const [userList, classList] = await Promise.all([usersApi.getAll(), classesApi.getAll()]);
@@ -72,8 +78,8 @@ export default function AdminUsersPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Users</h1>
-          <p className="mt-1 text-sm text-slate-500">Manage Admin, Teacher and Student accounts.</p>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Users</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Manage Admin, Teacher and Student accounts.</p>
         </div>
         <Button onClick={() => setCreateOpen(true)}>
           <Plus className="h-4 w-4" /> New user
@@ -85,36 +91,58 @@ export default function AdminUsersPage() {
           <EmptyState title="No users yet" description="Create your first user to get started." />
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
+            <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
+              <thead className="bg-slate-50 dark:bg-slate-800/60">
                 <tr>
                   {["Name", "Email", "Role", "Class", "Status", ""].map((h) => (
-                    <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {users.map((user) => (
                   <tr key={user.id}>
-                    <td className="px-4 py-3 text-sm font-medium text-slate-900">{user.fullName}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{user.email}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100">{user.fullName}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{user.email}</td>
                     <td className="px-4 py-3">
                       <Badge className={roleStyles[user.role]}>{user.role}</Badge>
                     </td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{user.className ?? "—"}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{user.className ?? "—"}</td>
                     <td className="px-4 py-3">
-                      <Badge className={user.isActive ? "bg-emerald-50 text-emerald-700 ring-emerald-300" : "bg-slate-100 text-slate-600 ring-slate-300"}>
+                      <Badge
+                        className={
+                          user.isActive
+                            ? "bg-emerald-50 text-emerald-700 ring-emerald-300 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-800"
+                            : "bg-slate-100 text-slate-600 ring-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700"
+                        }
+                      >
                         {user.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-1">
-                        <button onClick={() => setEditingUser(user)} className="rounded p-1.5 text-slate-500 hover:bg-slate-100" aria-label="Edit">
+                        <button
+                          onClick={() => setEditingUser(user)}
+                          className="rounded p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                          aria-label="Edit"
+                        >
                           <Pencil className="h-4 w-4" />
                         </button>
-                        <button onClick={() => handleDelete(user)} className="rounded p-1.5 text-red-500 hover:bg-red-50" aria-label="Delete">
+                        <button
+                          onClick={() => setResettingUser(user)}
+                          className="rounded p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                          aria-label="Reset password"
+                          title="Reset password"
+                        >
+                          <KeyRound className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(user)}
+                          className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
+                          aria-label="Delete"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
@@ -131,6 +159,7 @@ export default function AdminUsersPage() {
       {editingUser && (
         <EditUserModal user={editingUser} classes={classes} onClose={() => setEditingUser(null)} onUpdated={load} />
       )}
+      {resettingUser && <ResetPasswordModal user={resettingUser} onClose={() => setResettingUser(null)} />}
     </div>
   );
 }
@@ -246,8 +275,12 @@ function EditUserModal({
             ))}
           </Select>
         )}
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input type="checkbox" className="h-4 w-4 rounded border-slate-300 text-indigo-600" {...register("isActive")} />
+        <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-slate-300 text-indigo-600 dark:border-slate-600 dark:bg-slate-800"
+            {...register("isActive")}
+          />
           Account is active
         </label>
         <div className="flex justify-end gap-2 pt-2">
@@ -256,6 +289,44 @@ function EditUserModal({
           </Button>
           <Button type="submit" loading={isSubmitting}>
             Save changes
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function ResetPasswordModal({ user, onClose }: { user: UserDto; onClose: () => void }) {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<ResetPasswordValues>({ resolver: zodResolver(resetPasswordSchema) });
+
+  const onSubmit = async (values: ResetPasswordValues) => {
+    try {
+      await usersApi.resetPassword(user.id, values.newPassword);
+      toast.success(`Password reset for ${user.fullName}`);
+      onClose();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error));
+    }
+  };
+
+  return (
+    <Modal open onClose={onClose} title={`Reset password — ${user.fullName}`}>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Sets a new password for <span className="font-medium text-slate-700 dark:text-slate-300">{user.email}</span> immediately.
+          No email is sent — share the new password with them directly.
+        </p>
+        <Input label="New password" type="password" error={errors.newPassword?.message} {...register("newPassword")} />
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={isSubmitting}>
+            Reset password
           </Button>
         </div>
       </form>

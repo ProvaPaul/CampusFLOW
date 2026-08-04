@@ -24,12 +24,41 @@ public class DbSeeder
         _logger = logger;
     }
 
+    /// <summary>
+    /// Indexes the fields every service repeatedly filters/joins on (class/subject/teacher/
+    /// assignment/student references). Safe to call on every startup — MongoDB no-ops if an
+    /// equivalent index already exists.
+    /// </summary>
     public async Task EnsureIndexesAsync()
     {
         var emailIndex = new CreateIndexModel<User>(
             Builders<User>.IndexKeys.Ascending(u => u.Email),
             new CreateIndexOptions { Unique = true });
         await _context.Users.Indexes.CreateOneAsync(emailIndex);
+
+        await _context.Assignments.Indexes.CreateManyAsync(new[]
+        {
+            new CreateIndexModel<Assignment>(Builders<Assignment>.IndexKeys.Ascending(a => a.ClassId)),
+            new CreateIndexModel<Assignment>(Builders<Assignment>.IndexKeys.Ascending(a => a.SubjectId)),
+            new CreateIndexModel<Assignment>(Builders<Assignment>.IndexKeys.Ascending(a => a.TeacherId)),
+        });
+
+        await _context.Submissions.Indexes.CreateManyAsync(new[]
+        {
+            new CreateIndexModel<Submission>(Builders<Submission>.IndexKeys.Ascending(s => s.AssignmentId)),
+            new CreateIndexModel<Submission>(Builders<Submission>.IndexKeys.Ascending(s => s.StudentId)),
+            new CreateIndexModel<Submission>(Builders<Submission>.IndexKeys.Ascending(s => s.Status)),
+        });
+
+        await _context.TeacherAssignments.Indexes.CreateManyAsync(new[]
+        {
+            new CreateIndexModel<TeacherAssignment>(Builders<TeacherAssignment>.IndexKeys.Ascending(t => t.TeacherId)),
+            new CreateIndexModel<TeacherAssignment>(Builders<TeacherAssignment>.IndexKeys.Ascending(t => t.ClassId)),
+            new CreateIndexModel<TeacherAssignment>(Builders<TeacherAssignment>.IndexKeys.Ascending(t => t.SubjectId)),
+        });
+
+        await _context.Subjects.Indexes.CreateOneAsync(
+            new CreateIndexModel<Subject>(Builders<Subject>.IndexKeys.Ascending(s => s.ClassId)));
     }
 
     public async Task SeedAsync()

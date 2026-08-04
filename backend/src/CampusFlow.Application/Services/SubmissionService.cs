@@ -183,6 +183,20 @@ public class SubmissionService : ISubmissionService
             throw new ForbiddenException("You do not own this assignment.");
         }
 
+        if (status == SubmissionStatus.Graded)
+        {
+            throw new ValidationAppException("Use the grade endpoint to mark a submission as graded — it requires marks.");
+        }
+
+        // Moving away from Graded without going through GradeAsync means the marks/feedback
+        // no longer reflect a completed review — clear them so status and marks can't disagree.
+        if (submission.Status == SubmissionStatus.Graded)
+        {
+            submission.Marks = null;
+            submission.Feedback = null;
+            submission.GradedAt = null;
+        }
+
         submission.Status = status;
         submission.UpdatedAt = DateTime.UtcNow;
         await _submissionRepository.UpdateAsync(submission, ct);
@@ -219,6 +233,7 @@ public class SubmissionService : ISubmissionService
             assignment.Title,
             submission.StudentId,
             student?.FullName ?? "Unknown",
+            student?.Email ?? "unknown",
             submission.AnswerText,
             submission.AttachmentUrl,
             submission.SubmittedAt,
@@ -226,6 +241,7 @@ public class SubmissionService : ISubmissionService
             submission.Marks,
             assignment.MaxMarks,
             submission.Feedback,
-            submission.GradedAt);
+            submission.GradedAt,
+            submission.UpdatedAt);
     }
 }

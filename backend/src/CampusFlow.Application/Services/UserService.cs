@@ -103,6 +103,15 @@ public class UserService : IUserService
         return await GetByIdAsync(id, ct);
     }
 
+    public async Task ResetPasswordAsync(string id, ResetPasswordRequest request, CancellationToken ct = default)
+    {
+        var user = await GetUserOrThrowAsync(id, ct);
+
+        user.PasswordHash = _passwordHasher.Hash(request.NewPassword);
+        await _userRepository.UpdateAsync(user, ct);
+        _logger.LogInformation("Password reset for user {UserId} by admin", id);
+    }
+
     public async Task DeleteAsync(string id, CancellationToken ct = default)
     {
         await GetUserOrThrowAsync(id, ct);

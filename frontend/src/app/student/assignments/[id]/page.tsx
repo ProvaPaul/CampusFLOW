@@ -90,9 +90,9 @@ export default function StudentAssignmentDetailPage() {
           action={<Badge className={assignmentStatusStyles[assignment.status]}>{assignment.status}</Badge>}
         />
         <CardBody className="space-y-3">
-          <p className="whitespace-pre-wrap text-sm text-slate-700">{assignment.description}</p>
-          <div className="flex flex-wrap gap-4 text-sm text-slate-500">
-            <span className={deadlinePassed ? "font-medium text-red-600" : ""}>Deadline: {formatDate(assignment.deadline)}</span>
+          <p className="whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300">{assignment.description}</p>
+          <div className="flex flex-wrap gap-4 text-sm text-slate-500 dark:text-slate-400">
+            <span className={deadlinePassed ? "font-medium text-red-600 dark:text-red-400" : ""}>Deadline: {formatDate(assignment.deadline)}</span>
             <span>Max marks: {assignment.maxMarks}</span>
             <span>{assignment.allowResubmission ? "Resubmission allowed before deadline" : "Resubmission not allowed"}</span>
           </div>
@@ -103,12 +103,12 @@ export default function StudentAssignmentDetailPage() {
         <Card>
           <CardHeader title="Your grade" action={<Badge className={submissionStatusStyles[submission.status]}>{submission.status}</Badge>} />
           <CardBody className="space-y-2">
-            <p className="flex items-center gap-2 text-lg font-semibold text-emerald-700">
+            <p className="flex items-center gap-2 text-lg font-semibold text-emerald-700 dark:text-emerald-400">
               <CheckCircle2 className="h-5 w-5" />
               {submission.marks} / {submission.maxMarks}
             </p>
-            {submission.feedback && <p className="text-sm text-slate-700">{submission.feedback}</p>}
-            <p className="text-xs text-slate-400">Graded {submission.gradedAt && formatDate(submission.gradedAt)}</p>
+            {submission.feedback && <p className="text-sm text-slate-700 dark:text-slate-300">{submission.feedback}</p>}
+            <p className="text-xs text-slate-400 dark:text-slate-500">Graded {submission.gradedAt && formatDate(submission.gradedAt)}</p>
           </CardBody>
         </Card>
       )}
@@ -131,17 +131,22 @@ export default function StudentAssignmentDetailPage() {
             </form>
           ) : submission ? (
             <div className="space-y-2">
-              <p className="whitespace-pre-wrap text-sm text-slate-700">{submission.answerText}</p>
+              <p className="whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300">{submission.answerText}</p>
               {submission.attachmentUrl && (
-                <a href={submission.attachmentUrl} target="_blank" rel="noreferrer" className="block text-sm text-indigo-600 hover:underline">
+                <a
+                  href={submission.attachmentUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block text-sm text-indigo-600 hover:underline dark:text-indigo-400"
+                >
                   View attachment
                 </a>
               )}
-              <p className="text-xs text-slate-400">Submitted {formatDate(submission.submittedAt)}</p>
-              {!isGraded && <p className="text-xs text-amber-600">This submission can no longer be edited.</p>}
+              <p className="text-xs text-slate-400 dark:text-slate-500">Submitted {formatDate(submission.submittedAt)}</p>
+              {!isGraded && <p className="text-xs text-amber-600 dark:text-amber-400">This submission can no longer be edited.</p>}
             </div>
           ) : (
-            <p className="text-sm text-slate-500">The deadline for this assignment has passed.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">The deadline for this assignment has passed.</p>
           )}
         </CardBody>
       </Card>

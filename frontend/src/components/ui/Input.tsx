@@ -8,19 +8,19 @@ interface FieldWrapperProps {
 }
 
 const baseFieldClasses =
-  "block w-full rounded-md border-0 py-1.5 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 text-sm disabled:bg-slate-50 disabled:text-slate-500";
+  "block w-full rounded-md border-0 py-1.5 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 text-sm disabled:bg-slate-50 disabled:text-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700 dark:placeholder:text-slate-500 dark:disabled:bg-slate-900 dark:disabled:text-slate-500";
 
 function FieldChrome({ label, error, hint, htmlFor, children }: FieldWrapperProps & { htmlFor?: string; children: React.ReactNode }) {
   return (
     <div>
       {label && (
-        <label htmlFor={htmlFor} className="mb-1 block text-sm font-medium text-slate-700">
+        <label htmlFor={htmlFor} className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
           {label}
         </label>
       )}
       {children}
-      {hint && !error && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {hint && !error && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{hint}</p>}
+      {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
 }
@@ -63,7 +63,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     const inputId = id ?? generatedId;
     return (
       <FieldChrome label={label} error={error} hint={hint} htmlFor={inputId}>
-        <select ref={ref} id={inputId} className={cx(baseFieldClasses, "bg-white", error && "ring-red-400", className)} {...props}>
+        <select ref={ref} id={inputId} className={cx(baseFieldClasses, "bg-white dark:bg-slate-800", error && "ring-red-400", className)} {...props}>
           {children}
         </select>
       </FieldChrome>

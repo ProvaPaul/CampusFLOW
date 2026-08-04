@@ -14,8 +14,9 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
-import { EmptyState, Spinner } from "@/components/ui/Spinner";
-import { assignmentStatusStyles, formatDate, submissionStatusStyles } from "@/lib/utils";
+import { Spinner } from "@/components/ui/Spinner";
+import { SubmissionsTable } from "@/components/shared/SubmissionsTable";
+import { assignmentStatusStyles, formatDate } from "@/lib/utils";
 
 const editSchema = z.object({
   title: z.string().min(3, "Title is required"),
@@ -25,8 +26,6 @@ const editSchema = z.object({
   allowResubmission: z.boolean(),
 });
 type EditValues = z.infer<typeof editSchema>;
-
-const statusOptions: SubmissionStatus[] = ["Submitted", "Late", "NeedsRevision", "Graded"];
 
 export default function TeacherAssignmentDetailPage() {
   const params = useParams<{ id: string }>();
@@ -92,52 +91,15 @@ export default function TeacherAssignmentDetailPage() {
 
       <Card>
         <CardHeader title="Submissions" description={`${submissions.length} student(s) have submitted.`} />
-        {submissions.length === 0 ? (
-          <EmptyState title="No submissions yet" />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  {["Student", "Submitted", "Status", "Marks", ""].map((h) => (
-                    <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {submissions.map((s) => (
-                  <tr key={s.id}>
-                    <td className="px-4 py-3 text-sm font-medium text-slate-900">{s.studentName}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{formatDate(s.submittedAt)}</td>
-                    <td className="px-4 py-3">
-                      <select
-                        value={s.status}
-                        onChange={(e) => handleStatusChange(s, e.target.value as SubmissionStatus)}
-                        className={`rounded-full border-0 px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${submissionStatusStyles[s.status]}`}
-                      >
-                        {statusOptions.map((opt) => (
-                          <option key={opt} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-slate-600">
-                      {s.marks !== null ? `${s.marks}/${s.maxMarks}` : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Button size="sm" variant="secondary" onClick={() => setGrading(s)}>
-                        View &amp; grade
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <SubmissionsTable
+          submissions={submissions}
+          onStatusChange={handleStatusChange}
+          renderActions={(s) => (
+            <Button size="sm" variant="secondary" onClick={() => setGrading(s)}>
+              View &amp; grade
+            </Button>
+          )}
+        />
       </Card>
 
       {grading && (
@@ -188,8 +150,12 @@ function EditAssignmentForm({ assignment, onSaved }: { assignment: AssignmentDto
         <Input label="Deadline" type="datetime-local" error={errors.deadline?.message} {...register("deadline")} />
         <Input label="Max marks" type="number" min={1} error={errors.maxMarks?.message} {...register("maxMarks")} />
       </div>
-      <label className="flex items-center gap-2 text-sm text-slate-700">
-        <input type="checkbox" className="h-4 w-4 rounded border-slate-300 text-indigo-600" {...register("allowResubmission")} />
+      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+        <input
+          type="checkbox"
+          className="h-4 w-4 rounded border-slate-300 text-indigo-600 dark:border-slate-600 dark:bg-slate-800"
+          {...register("allowResubmission")}
+        />
         Allow students to update their submission before the deadline
       </label>
       <div className="flex justify-end">
@@ -242,9 +208,9 @@ function GradeModal({
 
   return (
     <Modal open onClose={onClose} title={`Grade — ${submission.studentName}`}>
-      <div className="mb-4 rounded-md bg-slate-50 p-3 text-sm text-slate-700 whitespace-pre-wrap">{submission.answerText}</div>
+      <div className="mb-4 rounded-md bg-slate-50 p-3 text-sm text-slate-700 whitespace-pre-wrap dark:bg-slate-800 dark:text-slate-300">{submission.answerText}</div>
       {submission.attachmentUrl && (
-        <a href={submission.attachmentUrl} target="_blank" rel="noreferrer" className="mb-4 block text-sm text-indigo-600 hover:underline">
+        <a href={submission.attachmentUrl} target="_blank" rel="noreferrer" className="mb-4 block text-sm text-indigo-600 hover:underline dark:text-indigo-400">
           View attachment
         </a>
       )}

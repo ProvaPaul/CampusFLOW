@@ -65,8 +65,8 @@ export default function TeacherAssignmentsPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Teacher Assignments</h1>
-          <p className="mt-1 text-sm text-slate-500">Assign teachers to a subject within a class/course.</p>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Teacher Assignments</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Assign teachers to a subject within a class/course.</p>
         </div>
         <Button onClick={() => setModalOpen(true)} disabled={!canCreate}>
           <Plus className="h-4 w-4" /> New assignment
@@ -74,23 +74,26 @@ export default function TeacherAssignmentsPage() {
       </div>
 
       {!canCreate && (
-        <p className="mt-3 text-sm text-amber-600">You need at least one teacher, class, and subject before assigning.</p>
+        <p className="mt-3 text-sm text-amber-600 dark:text-amber-400">You need at least one teacher, class, and subject before assigning.</p>
       )}
 
       <Card className="mt-6 overflow-hidden">
         {assignments.length === 0 ? (
           <EmptyState title="No teacher assignments yet" />
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {assignments.map((item) => (
               <li key={item.id} className="flex items-center justify-between px-5 py-3.5">
                 <div>
-                  <p className="text-sm font-medium text-slate-900">{item.teacherName}</p>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{item.teacherName}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
                     {item.subjectName} · {item.className}
                   </p>
                 </div>
-                <button onClick={() => handleDelete(item)} className="rounded p-1.5 text-red-500 hover:bg-red-50">
+                <button
+                  onClick={() => handleDelete(item)}
+                  className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
+                >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </li>

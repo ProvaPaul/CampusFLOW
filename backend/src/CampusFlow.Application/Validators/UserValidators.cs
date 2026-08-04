@@ -26,3 +26,11 @@ public class UpdateUserRequestValidator : AbstractValidator<UpdateUserRequest>
         RuleFor(x => x.FullName).NotEmpty().MaximumLength(150);
     }
 }
+
+public class ResetPasswordRequestValidator : AbstractValidator<ResetPasswordRequest>
+{
+    public ResetPasswordRequestValidator()
+    {
+        RuleFor(x => x.NewPassword).NotEmpty().MinimumLength(6);
+    }
+}

@@ -1,19 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
-import { Plus, Pencil, Trash2 } from "lucide-react";
-import { classesApi, subjectsApi } from "@/lib/api";
+import { Plus, BookOpen, AlertTriangle, ClipboardList, TrendingUp } from "lucide-react";
+import { subjectsApi } from "@/lib/api";
 import { getApiErrorMessage } from "@/lib/api-client";
-import type { ClassDto, SubjectDto } from "@/lib/types";
-import { Card } from "@/components/ui/Card";
+import type { SubjectDto } from "@/lib/types";
+import { useAdminAnalytics } from "@/lib/use-admin-analytics";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Select } from "@/components/ui/Input";
 import { EmptyState, Spinner } from "@/components/ui/Spinner";
+import { StatCard, StatCardGrid } from "@/components/admin/StatCard";
+import { SubjectCard } from "@/components/admin/SubjectCard";
 
 const createSchema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -26,39 +28,35 @@ type CreateValues = z.infer<typeof createSchema>;
 type UpdateValues = z.infer<typeof updateSchema>;
 
 export default function AdminSubjectsPage() {
-  const [subjects, setSubjects] = useState<SubjectDto[] | null>(null);
-  const [classes, setClasses] = useState<ClassDto[]>([]);
+  const { data, loading, reload } = useAdminAnalytics();
   const [modalState, setModalState] = useState<{ mode: "create" } | { mode: "edit"; item: SubjectDto } | null>(null);
-
-  const load = async () => {
-    const [subjectList, classList] = await Promise.all([subjectsApi.getAll(), classesApi.getAll()]);
-    setSubjects(subjectList);
-    setClasses(classList);
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
 
   const handleDelete = async (item: SubjectDto) => {
     if (!confirm(`Delete subject "${item.name}"?`)) return;
     try {
       await subjectsApi.remove(item.id);
       toast.success("Subject deleted");
-      load();
+      reload();
     } catch (error) {
       toast.error(getApiErrorMessage(error));
     }
   };
 
-  if (!subjects) return <Spinner />;
+  if (loading || !data) return <Spinner />;
+
+  const classes = data.classes.map((c) => c.classItem);
+  const subjects = data.subjects;
+  const needingTeacher = subjects.filter((s) => s.status === "Needs Teacher").length;
+  const totalAssignments = subjects.reduce((sum, s) => sum + s.assignmentsCount, 0);
+  const ratesWithData = subjects.map((s) => s.submissionRate).filter((r): r is number => r !== null);
+  const avgRate = ratesWithData.length > 0 ? Math.round(ratesWithData.reduce((a, b) => a + b, 0) / ratesWithData.length) : null;
 
   return (
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Subjects</h1>
-          <p className="mt-1 text-sm text-slate-500">Manage subjects offered within each class/course.</p>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Subjects</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Manage subjects and monitor how each one is performing.</p>
         </div>
         <Button onClick={() => setModalState({ mode: "create" })} disabled={classes.length === 0}>
           <Plus className="h-4 w-4" /> New subject
@@ -66,59 +64,52 @@ export default function AdminSubjectsPage() {
       </div>
 
       {classes.length === 0 && (
-        <p className="mt-3 text-sm text-amber-600">Create a class first before adding subjects.</p>
+        <p className="mt-3 text-sm text-amber-600 dark:text-amber-400">Create a class first before adding subjects.</p>
       )}
 
-      <Card className="mt-6 overflow-hidden">
-        {subjects.length === 0 ? (
+      <StatCardGrid className="mt-6">
+        <StatCard icon={BookOpen} label="Total Subjects" value={subjects.length} />
+        <StatCard icon={AlertTriangle} label="Without a Teacher" value={needingTeacher} tone={needingTeacher > 0 ? "warning" : "default"} />
+        <StatCard icon={ClipboardList} label="Assignments Across Subjects" value={totalAssignments} />
+        <StatCard icon={TrendingUp} label="Avg. Submission Rate" value={avgRate === null ? "No data" : `${avgRate}%`} />
+      </StatCardGrid>
+
+      {subjects.length === 0 ? (
+        <div className="mt-6 rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
           <EmptyState title="No subjects yet" description="Create your first subject." />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  {["Name", "Code", "Class", ""].map((h) => (
-                    <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {subjects.map((item) => (
-                  <tr key={item.id}>
-                    <td className="px-4 py-3 text-sm font-medium text-slate-900">{item.name}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{item.code}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{item.className ?? "—"}</td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-1">
-                        <button onClick={() => setModalState({ mode: "edit", item })} className="rounded p-1.5 text-slate-500 hover:bg-slate-100">
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => handleDelete(item)} className="rounded p-1.5 text-red-500 hover:bg-red-50">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+        </div>
+      ) : (
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {subjects.map((insight) => (
+            <SubjectCard
+              key={insight.subject.id}
+              insight={insight}
+              onEdit={() => setModalState({ mode: "edit", item: insight.subject })}
+              onDelete={() => handleDelete(insight.subject)}
+            />
+          ))}
+        </div>
+      )}
 
       {modalState?.mode === "create" && (
-        <CreateSubjectModal classes={classes} onClose={() => setModalState(null)} onSaved={load} />
+        <CreateSubjectModal classes={classes.map((c) => ({ id: c.id, name: c.name }))} onClose={() => setModalState(null)} onSaved={reload} />
       )}
       {modalState?.mode === "edit" && (
-        <EditSubjectModal item={modalState.item} onClose={() => setModalState(null)} onSaved={load} />
+        <EditSubjectModal item={modalState.item} onClose={() => setModalState(null)} onSaved={reload} />
       )}
     </div>
   );
 }
 
-function CreateSubjectModal({ classes, onClose, onSaved }: { classes: ClassDto[]; onClose: () => void; onSaved: () => void }) {
+function CreateSubjectModal({
+  classes,
+  onClose,
+  onSaved,
+}: {
+  classes: Array<{ id: string; name: string }>;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   const {
     register,
     handleSubmit,

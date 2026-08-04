@@ -48,6 +48,15 @@ public class UsersController : ControllerBase
     public async Task<ActionResult<UserDto>> Update(string id, UpdateUserRequest request, CancellationToken ct) =>
         Ok(await _userService.UpdateAsync(id, request, ct));
 
+    /// <summary>Admin resets a user's password. No email/notification flow — the new password is set immediately.</summary>
+    [HttpPatch("{id}/reset-password")]
+    [Authorize(Roles = nameof(UserRole.Admin))]
+    public async Task<IActionResult> ResetPassword(string id, ResetPasswordRequest request, CancellationToken ct)
+    {
+        await _userService.ResetPasswordAsync(id, request, ct);
+        return NoContent();
+    }
+
     [HttpDelete("{id}")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> Delete(string id, CancellationToken ct)

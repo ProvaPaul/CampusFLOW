@@ -37,6 +37,7 @@ export const usersApi = {
   getById: (id: string) => apiClient.get<UserDto>(`/api/users/${id}`).then((r) => r.data),
   create: (payload: CreateUserPayload) => apiClient.post<UserDto>("/api/users", payload).then((r) => r.data),
   update: (id: string, payload: UpdateUserPayload) => apiClient.put<UserDto>(`/api/users/${id}`, payload).then((r) => r.data),
+  resetPassword: (id: string, newPassword: string) => apiClient.patch(`/api/users/${id}/reset-password`, { newPassword }),
   remove: (id: string) => apiClient.delete(`/api/users/${id}`),
 };
 

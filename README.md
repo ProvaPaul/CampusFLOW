@@ -265,6 +265,7 @@ backend is running (e.g. http://localhost:5000/swagger). Highlights:
 |---|---|---|
 | `POST /api/auth/login` | Public | Authenticate, returns JWT + user profile |
 | `GET/POST/PUT/DELETE /api/users` | Admin | Manage user accounts |
+| `PATCH /api/users/{id}/reset-password` | Admin | Reset a user's password (no email flow — the new password takes effect immediately) |
 | `GET /api/users/me` | Any authenticated | Current user's profile |
 | `GET/POST/PUT/DELETE /api/classes` | Read: any; Write: Admin | Manage classes/courses |
 | `GET/POST/PUT/DELETE /api/subjects` | Read: any; Write: Admin | Manage subjects (optionally filter by `classId`) |
@@ -312,6 +313,10 @@ weren't fully specified:
 3. **Late submissions are accepted, not blocked.** A submission after the deadline is still recorded
    but marked `Late` so a teacher can see and grade it — this seemed more realistic for a school
    context than hard-rejecting them, and gives the submission-status feature something to model.
+   *(Reviewed during the Phase 1 audit and deliberately kept as-is — there's no technical reason to
+   change it, and hard-rejecting a five-minutes-late submission felt like the wrong default for a
+   school tool. If your grading rubric expects a hard block, the one-line change is in
+   `SubmissionService.SubmitAsync`.)*
 4. **"Update a submission before the deadline, if allowed"** was implemented as a per-assignment
    `AllowResubmission` flag the teacher sets at creation time, checked alongside the deadline and the
    submission not already being graded.
@@ -320,7 +325,10 @@ weren't fully specified:
    self-contained (no S3/blob storage dependency to set up).
 6. **Submission status** (`Submitted`, `Late`, `NeedsRevision`, `Graded`) is a fixed enum a teacher
    can move between manually (per "Change the submission status when necessary"), in addition to the
-   automatic `Submitted`/`Late` assignment at submission time and `Graded` on grading.
+   automatic `Submitted`/`Late` assignment at submission time and `Graded` on grading. `Graded` can
+   only be reached through the grade endpoint (it requires marks) — the manual status-change endpoint
+   rejects a direct switch to `Graded`, and moving a submission *away* from `Graded` automatically
+   clears its marks and feedback, so status and marks can never disagree.
 7. **Admin does not directly create/grade assignments** — the spec scopes that to Teachers; Admin's
    assignment-related capability is limited to a read-only view of everything plus the ability to
    delete any assignment (platform moderation).
