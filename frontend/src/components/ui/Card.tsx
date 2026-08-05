@@ -1,8 +1,21 @@
-import { cx } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
-export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
+interface CardProps {
+  className?: string;
+  children: React.ReactNode;
+  /** Adds a subtle lift + border highlight on hover — for clickable/navigable cards. */
+  interactive?: boolean;
+}
+
+export function Card({ className, children, interactive }: CardProps) {
   return (
-    <div className={cx("rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900", className)}>
+    <div
+      className={cn(
+        "rounded-xl border border-slate-200 bg-white shadow-sm transition-all dark:border-slate-800 dark:bg-slate-900",
+        interactive && "hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md dark:hover:border-slate-700",
+        className
+      )}
+    >
       {children}
     </div>
   );
@@ -21,5 +34,5 @@ export function CardHeader({ title, description, action }: { title: string; desc
 }
 
 export function CardBody({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <div className={cx("px-5 py-4", className)}>{children}</div>;
+  return <div className={cn("px-5 py-4", className)}>{children}</div>;
 }

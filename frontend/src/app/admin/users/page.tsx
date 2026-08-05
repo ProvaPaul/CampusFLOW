@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -14,7 +14,12 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Select } from "@/components/ui/Input";
-import { EmptyState, Spinner } from "@/components/ui/Spinner";
+import { SkeletonTable } from "@/components/ui/Skeleton";
+import { SearchInput } from "@/components/ui/SearchInput";
+import { Avatar } from "@/components/ui/Avatar";
+import { Pagination } from "@/components/ui/Pagination";
+import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuIconTrigger } from "@/components/ui/DropdownMenu";
 
 const createUserSchema = z.object({
   fullName: z.string().min(2, "Full name is required"),
@@ -44,12 +49,18 @@ const roleStyles: Record<UserRole, string> = {
   Student: "bg-emerald-50 text-emerald-700 ring-emerald-300 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-800",
 };
 
+const PAGE_SIZE = 10;
+const roleFilterOptions: Array<UserRole | "All"> = ["All", "Admin", "Teacher", "Student"];
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserDto[] | null>(null);
   const [classes, setClasses] = useState<ClassDto[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserDto | null>(null);
   const [resettingUser, setResettingUser] = useState<UserDto | null>(null);
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<UserRole | "All">("All");
+  const [page, setPage] = useState(1);
 
   const load = async () => {
     const [userList, classList] = await Promise.all([usersApi.getAll(), classesApi.getAll()]);
@@ -72,7 +83,72 @@ export default function AdminUsersPage() {
     }
   };
 
-  if (!users) return <Spinner />;
+  const filtered = useMemo(() => {
+    if (!users) return [];
+    const query = search.trim().toLowerCase();
+    return users.filter((u) => {
+      const matchesSearch = !query || u.fullName.toLowerCase().includes(query) || u.email.toLowerCase().includes(query);
+      const matchesRole = roleFilter === "All" || u.role === roleFilter;
+      return matchesSearch && matchesRole;
+    });
+  }, [users, search, roleFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const columns: DataTableColumn<UserDto>[] = [
+    {
+      key: "name",
+      header: "Name",
+      sortAccessor: (u) => u.fullName,
+      render: (u) => (
+        <div className="flex items-center gap-2.5">
+          <Avatar name={u.fullName} size="sm" />
+          <span className="font-medium text-slate-900 dark:text-slate-100">{u.fullName}</span>
+        </div>
+      ),
+    },
+    { key: "email", header: "Email", sortAccessor: (u) => u.email, render: (u) => <span className="text-slate-600 dark:text-slate-400">{u.email}</span> },
+    { key: "role", header: "Role", sortAccessor: (u) => u.role, render: (u) => <Badge className={roleStyles[u.role]}>{u.role}</Badge> },
+    { key: "class", header: "Class", render: (u) => <span className="text-slate-600 dark:text-slate-400">{u.className ?? "—"}</span> },
+    {
+      key: "status",
+      header: "Status",
+      render: (u) => (
+        <Badge
+          className={
+            u.isActive
+              ? "bg-emerald-50 text-emerald-700 ring-emerald-300 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-800"
+              : "bg-slate-100 text-slate-600 ring-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700"
+          }
+        >
+          {u.isActive ? "Active" : "Inactive"}
+        </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      hideOnMobile: true,
+      render: (u) => (
+        <DropdownMenu>
+          <DropdownMenuIconTrigger label={`Actions for ${u.fullName}`} />
+          <DropdownMenuContent>
+            <DropdownMenuItem onSelect={() => setEditingUser(u)}>
+              <Pencil className="h-3.5 w-3.5" /> Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setResettingUser(u)}>
+              <KeyRound className="h-3.5 w-3.5" /> Reset password
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => handleDelete(u)} destructive>
+              <Trash2 className="h-3.5 w-3.5" /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ];
 
   return (
     <div>
@@ -86,74 +162,59 @@ export default function AdminUsersPage() {
         </Button>
       </div>
 
-      <Card className="mt-6 overflow-hidden">
-        {users.length === 0 ? (
-          <EmptyState title="No users yet" description="Create your first user to get started." />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
-              <thead className="bg-slate-50 dark:bg-slate-800/60">
-                <tr>
-                  {["Name", "Email", "Role", "Class", "Status", ""].map((h) => (
-                    <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {users.map((user) => (
-                  <tr key={user.id}>
-                    <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100">{user.fullName}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{user.email}</td>
-                    <td className="px-4 py-3">
-                      <Badge className={roleStyles[user.role]}>{user.role}</Badge>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{user.className ?? "—"}</td>
-                    <td className="px-4 py-3">
-                      <Badge
-                        className={
-                          user.isActive
-                            ? "bg-emerald-50 text-emerald-700 ring-emerald-300 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-800"
-                            : "bg-slate-100 text-slate-600 ring-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700"
-                        }
-                      >
-                        {user.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-1">
-                        <button
-                          onClick={() => setEditingUser(user)}
-                          className="rounded p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-                          aria-label="Edit"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => setResettingUser(user)}
-                          className="rounded p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-                          aria-label="Reset password"
-                          title="Reset password"
-                        >
-                          <KeyRound className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(user)}
-                          className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
-                          aria-label="Delete"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {!users ? (
+        <div className="mt-6">
+          <SkeletonTable columns={5} />
+        </div>
+      ) : (
+        <Card className="mt-6 overflow-hidden">
+          <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center dark:border-slate-800">
+            <SearchInput
+              value={search}
+              onChange={(v) => {
+                setSearch(v);
+                setPage(1);
+              }}
+              placeholder="Search by name or email..."
+              className="flex-1"
+            />
+            <Select
+              value={roleFilter}
+              onChange={(e) => {
+                setRoleFilter(e.target.value as UserRole | "All");
+                setPage(1);
+              }}
+              className="sm:w-40"
+            >
+              {roleFilterOptions.map((r) => (
+                <option key={r} value={r}>
+                  {r === "All" ? "All roles" : r}
+                </option>
+              ))}
+            </Select>
           </div>
-        )}
-      </Card>
+
+          <div className="p-4">
+            <DataTable
+              data={pageItems}
+              columns={columns}
+              keyExtractor={(u) => u.id}
+              mobileTitle={(u) => (
+                <div className="flex items-center gap-2.5">
+                  <Avatar name={u.fullName} size="sm" />
+                  {u.fullName}
+                </div>
+              )}
+              mobileBadge={(u) => <Badge className={roleStyles[u.role]}>{u.role}</Badge>}
+              emptyTitle={users.length === 0 ? "No users yet" : "No users match your search/filter"}
+              emptyDescription={users.length === 0 ? "Create your first user to get started." : undefined}
+            />
+            <div className="mt-4">
+              <Pagination page={page} totalPages={totalPages} totalItems={filtered.length} onPageChange={setPage} itemLabel="user" />
+            </div>
+          </div>
+        </Card>
+      )}
 
       <CreateUserModal open={createOpen} onClose={() => setCreateOpen(false)} classes={classes} onCreated={load} />
       {editingUser && (
@@ -197,18 +258,25 @@ function CreateUserModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Create user">
+    <Modal open={open} onClose={onClose} title="Create user" description="Admins, teachers and students all sign in with these credentials.">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <Input label="Full name" error={errors.fullName?.message} {...register("fullName")} />
-        <Input label="Email" type="email" error={errors.email?.message} {...register("email")} />
-        <Input label="Password" type="password" error={errors.password?.message} {...register("password")} />
-        <Select label="Role" error={errors.role?.message} {...register("role")}>
+        <Input label="Full name" required error={errors.fullName?.message} {...register("fullName")} />
+        <Input label="Email" type="email" required error={errors.email?.message} {...register("email")} />
+        <Input
+          label="Password"
+          type="password"
+          required
+          hint="At least 6 characters."
+          error={errors.password?.message}
+          {...register("password")}
+        />
+        <Select label="Role" required error={errors.role?.message} {...register("role")}>
           <option value="Admin">Admin</option>
           <option value="Teacher">Teacher</option>
           <option value="Student">Student</option>
         </Select>
         {role === "Student" && (
-          <Select label="Class" error={errors.classId?.message} {...register("classId")}>
+          <Select label="Class" required error={errors.classId?.message} {...register("classId")}>
             <option value="">Select a class</option>
             {classes.map((c) => (
               <option key={c.id} value={c.id}>
@@ -262,11 +330,11 @@ function EditUserModal({
   };
 
   return (
-    <Modal open onClose={onClose} title={`Edit ${user.fullName}`}>
+    <Modal open onClose={onClose} title={`Edit ${user.fullName}`} description={`${user.email} · ${user.role}`}>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <Input label="Full name" error={errors.fullName?.message} {...register("fullName")} />
+        <Input label="Full name" required error={errors.fullName?.message} {...register("fullName")} />
         {user.role === "Student" && (
-          <Select label="Class" error={errors.classId?.message} {...register("classId")}>
+          <Select label="Class" required error={errors.classId?.message} {...register("classId")}>
             <option value="">Select a class</option>
             {classes.map((c) => (
               <option key={c.id} value={c.id}>
@@ -320,7 +388,7 @@ function ResetPasswordModal({ user, onClose }: { user: UserDto; onClose: () => v
           Sets a new password for <span className="font-medium text-slate-700 dark:text-slate-300">{user.email}</span> immediately.
           No email is sent — share the new password with them directly.
         </p>
-        <Input label="New password" type="password" error={errors.newPassword?.message} {...register("newPassword")} />
+        <Input label="New password" type="password" required error={errors.newPassword?.message} {...register("newPassword")} />
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel

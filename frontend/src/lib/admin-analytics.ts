@@ -1,4 +1,4 @@
-import { isPast } from "date-fns";
+import { format, isPast } from "date-fns";
 import { dateFromObjectId } from "./object-id";
 import type { AssignmentDto, ClassDto, SubjectDto, SubmissionDto, TeacherAssignmentDto, UserDto } from "./types";
 
@@ -14,6 +14,7 @@ export type EntityStatus = "Active" | "Needs Teacher" | "No Assignments" | "Sett
 export interface GlobalStats {
   totalClasses: number;
   totalSubjects: number;
+  totalAdmins: number;
   totalTeachers: number;
   totalStudents: number;
   totalAssignments: number;
@@ -21,6 +22,13 @@ export interface GlobalStats {
   publishedAssignments: number;
   pendingReviews: number;
   completedSubmissions: number;
+}
+
+export interface ChartData {
+  assignmentStatus: Array<{ name: string; value: number }>;
+  userDistribution: Array<{ name: string; value: number }>;
+  submissionTrend: Array<{ date: string; submissions: number }>;
+  classActivity: Array<{ name: string; assignments: number; submissionRate: number }>;
 }
 
 export interface SubjectInsight {
@@ -82,6 +90,7 @@ export interface AdminAnalytics {
   classes: ClassInsight[];
   activity: ActivityEvent[];
   insights: QuickInsights;
+  charts: ChartData;
 }
 
 interface ComputeInput {
@@ -130,6 +139,7 @@ export function computeAdminAnalytics(input: ComputeInput): AdminAnalytics {
 
   const students = users.filter((u) => u.role === "Student");
   const teachers = users.filter((u) => u.role === "Teacher");
+  const admins = users.filter((u) => u.role === "Admin");
 
   const draftAssignments = assignments.filter((a) => a.status === "Draft");
   const publishedAssignments = assignments.filter((a) => a.status === "Published");
@@ -146,6 +156,7 @@ export function computeAdminAnalytics(input: ComputeInput): AdminAnalytics {
   const global: GlobalStats = {
     totalClasses: classes.length,
     totalSubjects: subjects.length,
+    totalAdmins: admins.length,
     totalTeachers: teachers.length,
     totalStudents: students.length,
     totalAssignments: assignments.length,
@@ -322,5 +333,36 @@ export function computeAdminAnalytics(input: ComputeInput): AdminAnalytics {
     draftAssignments,
   };
 
-  return { global, subjects: subjectInsights, classes: classInsights, activity: activity.slice(0, 12), insights };
+  const allSubmissions = Object.values(submissionsByAssignment).flat();
+  const trendDays = new Map<string, { label: string; count: number }>();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    trendDays.set(d.toDateString(), { label: format(d, "MMM d"), count: 0 });
+  }
+  allSubmissions.forEach((s) => {
+    const key = new Date(s.submittedAt).toDateString();
+    const bucket = trendDays.get(key);
+    if (bucket) bucket.count += 1;
+  });
+
+  const charts: ChartData = {
+    assignmentStatus: [
+      { name: "Published", value: publishedAssignments.length },
+      { name: "Draft", value: draftAssignments.length },
+    ],
+    userDistribution: [
+      { name: "Students", value: students.length },
+      { name: "Teachers", value: teachers.length },
+      { name: "Admins", value: admins.length },
+    ],
+    submissionTrend: Array.from(trendDays.values()).map((v) => ({ date: v.label, submissions: v.count })),
+    classActivity: classInsights.map((ci) => ({
+      name: ci.classItem.name,
+      assignments: ci.activeAssignments,
+      submissionRate: ci.averageSubmissionRate ?? 0,
+    })),
+  };
+
+  return { global, subjects: subjectInsights, classes: classInsights, activity: activity.slice(0, 12), insights, charts };
 }

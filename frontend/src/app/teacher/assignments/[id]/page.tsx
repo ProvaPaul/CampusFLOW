@@ -14,7 +14,8 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
-import { Spinner } from "@/components/ui/Spinner";
+import { SkeletonCard, SkeletonTable } from "@/components/ui/Skeleton";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { SubmissionsTable } from "@/components/shared/SubmissionsTable";
 import { assignmentStatusStyles, formatDate } from "@/lib/utils";
 
@@ -67,10 +68,18 @@ export default function TeacherAssignmentDetailPage() {
     }
   };
 
-  if (!assignment || !submissions) return <Spinner />;
+  if (!assignment || !submissions) {
+    return (
+      <div className="space-y-6">
+        <SkeletonCard />
+        <SkeletonTable columns={4} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[{ label: "My Assignments", href: "/teacher" }, { label: assignment.title }]} />
       <Card>
         <CardHeader
           title={assignment.title}
@@ -144,11 +153,11 @@ function EditAssignmentForm({ assignment, onSaved }: { assignment: AssignmentDto
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <Input label="Title" error={errors.title?.message} {...register("title")} />
-      <Textarea label="Description / instructions" error={errors.description?.message} {...register("description")} />
+      <Input label="Title" required error={errors.title?.message} {...register("title")} />
+      <Textarea label="Description / instructions" required error={errors.description?.message} {...register("description")} />
       <div className="grid grid-cols-2 gap-4">
-        <Input label="Deadline" type="datetime-local" error={errors.deadline?.message} {...register("deadline")} />
-        <Input label="Max marks" type="number" min={1} error={errors.maxMarks?.message} {...register("maxMarks")} />
+        <Input label="Deadline" type="datetime-local" required error={errors.deadline?.message} {...register("deadline")} />
+        <Input label="Max marks" type="number" min={1} required error={errors.maxMarks?.message} {...register("maxMarks")} />
       </div>
       <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
         <input
@@ -207,7 +216,7 @@ function GradeModal({
   };
 
   return (
-    <Modal open onClose={onClose} title={`Grade — ${submission.studentName}`}>
+    <Modal open onClose={onClose} title={`Grade — ${submission.studentName}`} description="Marks and feedback are visible to the student immediately.">
       <div className="mb-4 rounded-md bg-slate-50 p-3 text-sm text-slate-700 whitespace-pre-wrap dark:bg-slate-800 dark:text-slate-300">{submission.answerText}</div>
       {submission.attachmentUrl && (
         <a href={submission.attachmentUrl} target="_blank" rel="noreferrer" className="mb-4 block text-sm text-indigo-600 hover:underline dark:text-indigo-400">
@@ -215,7 +224,15 @@ function GradeModal({
         </a>
       )}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <Input label={`Marks (out of ${submission.maxMarks})`} type="number" min={0} max={submission.maxMarks} error={errors.marks?.message} {...register("marks")} />
+        <Input
+          label={`Marks (out of ${submission.maxMarks})`}
+          type="number"
+          min={0}
+          max={submission.maxMarks}
+          required
+          error={errors.marks?.message}
+          {...register("marks")}
+        />
         <Textarea label="Feedback" error={errors.feedback?.message} {...register("feedback")} />
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>

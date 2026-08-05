@@ -1,14 +1,16 @@
-import { ButtonHTMLAttributes, forwardRef } from "react";
+import { forwardRef } from "react";
+import { motion, type HTMLMotionProps } from "framer-motion";
 import { Loader2 } from "lucide-react";
-import { cx } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 type Variant = "primary" | "secondary" | "danger" | "ghost";
 type Size = "sm" | "md";
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends Omit<HTMLMotionProps<"button">, "ref" | "children"> {
   variant?: Variant;
   size?: Size;
   loading?: boolean;
+  children?: React.ReactNode;
 }
 
 const variantClasses: Record<Variant, string> = {
@@ -28,11 +30,13 @@ const sizeClasses: Record<Size, string> = {
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "primary", size = "md", loading, disabled, children, ...props }, ref) => (
-    <button
+    <motion.button
       ref={ref}
       disabled={disabled || loading}
-      className={cx(
-        "inline-flex items-center justify-center gap-1.5 rounded-md font-semibold shadow-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed",
+      whileTap={disabled || loading ? undefined : { scale: 0.97 }}
+      transition={{ duration: 0.1 }}
+      className={cn(
+        "inline-flex items-center justify-center gap-1.5 rounded-lg font-semibold shadow-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:shadow-none",
         variantClasses[variant],
         sizeClasses[size],
         className
@@ -41,7 +45,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     >
       {loading && <Loader2 className="h-4 w-4 animate-spin" />}
       {children}
-    </button>
+    </motion.button>
   )
 );
 Button.displayName = "Button";

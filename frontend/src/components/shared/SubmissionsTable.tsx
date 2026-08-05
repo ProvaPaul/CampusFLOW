@@ -2,7 +2,7 @@
 
 import type { SubmissionDto, SubmissionStatus } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
-import { EmptyState } from "@/components/ui/Spinner";
+import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import { formatDate, submissionStatusStyles } from "@/lib/utils";
 
 export interface SubmissionsTableProps {
@@ -35,91 +35,116 @@ export function SubmissionsTable({
   renderActions,
   emptyTitle = "No submissions yet",
 }: SubmissionsTableProps) {
-  if (submissions.length === 0) {
-    return <EmptyState title={emptyTitle} />;
-  }
-
   const editable = !!onStatusChange;
 
+  const columns: DataTableColumn<SubmissionDto>[] = [
+    {
+      key: "student",
+      header: "Student",
+      sortAccessor: (s) => s.studentName,
+      render: (s) => <span className="font-medium text-slate-900 dark:text-slate-100">{s.studentName}</span>,
+    },
+    ...(showEmail
+      ? [
+          {
+            key: "email",
+            header: "Email",
+            render: (s: SubmissionDto) => <span className="text-slate-600 dark:text-slate-400">{s.studentEmail}</span>,
+          } satisfies DataTableColumn<SubmissionDto>,
+        ]
+      : []),
+    {
+      key: "submitted",
+      header: "Submitted",
+      sortAccessor: (s) => s.submittedAt,
+      render: (s) => <span className="text-slate-600 dark:text-slate-400">{formatDate(s.submittedAt)}</span>,
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (s) =>
+        editable && s.status !== "Graded" ? (
+          <select
+            value={s.status}
+            onChange={(e) => onStatusChange?.(s, e.target.value as SubmissionStatus)}
+            onClick={(e) => e.stopPropagation()}
+            className={`rounded-full border-0 px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${submissionStatusStyles[s.status]}`}
+          >
+            {statusOptions.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+        ) : editable && s.status === "Graded" ? (
+          <div className="flex items-center gap-2">
+            <Badge className={submissionStatusStyles[s.status]}>{s.status}</Badge>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (confirm("Send this submission back for revision? This clears its marks and feedback.")) {
+                  onStatusChange?.(s, "NeedsRevision");
+                }
+              }}
+              className="text-xs text-slate-500 hover:underline dark:text-slate-400"
+            >
+              Send back
+            </button>
+          </div>
+        ) : (
+          <Badge className={submissionStatusStyles[s.status]}>{s.status}</Badge>
+        ),
+    },
+    {
+      key: "marks",
+      header: "Marks",
+      sortAccessor: (s) => s.marks ?? -1,
+      render: (s) => <span className="text-slate-600 dark:text-slate-400">{s.marks !== null ? `${s.marks}/${s.maxMarks}` : "—"}</span>,
+    },
+    ...(showFeedback
+      ? [
+          {
+            key: "feedback",
+            header: "Feedback",
+            render: (s: SubmissionDto) => (
+              <span className="line-clamp-1 max-w-xs text-slate-600 dark:text-slate-400" title={s.feedback ?? undefined}>
+                {s.feedback ?? "—"}
+              </span>
+            ),
+          } satisfies DataTableColumn<SubmissionDto>,
+        ]
+      : []),
+    ...(showLastUpdated
+      ? [
+          {
+            key: "updatedAt",
+            header: "Last Updated",
+            sortAccessor: (s: SubmissionDto) => s.updatedAt ?? "",
+            render: (s: SubmissionDto) => <span className="text-slate-600 dark:text-slate-400">{s.updatedAt ? formatDate(s.updatedAt) : "—"}</span>,
+          } satisfies DataTableColumn<SubmissionDto>,
+        ]
+      : []),
+    ...(renderActions
+      ? [
+          {
+            key: "actions",
+            header: "",
+            align: "right" as const,
+            hideOnMobile: true,
+            render: renderActions,
+          } satisfies DataTableColumn<SubmissionDto>,
+        ]
+      : []),
+  ];
+
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
-        <thead className="bg-slate-50 dark:bg-slate-800/60">
-          <tr>
-            {[
-              "Student",
-              showEmail && "Email",
-              "Submitted",
-              "Status",
-              "Marks",
-              showFeedback && "Feedback",
-              showLastUpdated && "Last Updated",
-              renderActions && "",
-            ]
-              .filter((h): h is string => typeof h === "string")
-              .map((h) => (
-                <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  {h}
-                </th>
-              ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-          {submissions.map((s) => (
-            <tr key={s.id}>
-              <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100">{s.studentName}</td>
-              {showEmail && <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{s.studentEmail}</td>}
-              <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{formatDate(s.submittedAt)}</td>
-              <td className="px-4 py-3">
-                {editable && s.status !== "Graded" ? (
-                  <select
-                    value={s.status}
-                    onChange={(e) => onStatusChange?.(s, e.target.value as SubmissionStatus)}
-                    className={`rounded-full border-0 px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${submissionStatusStyles[s.status]}`}
-                  >
-                    {statusOptions.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                ) : editable && s.status === "Graded" ? (
-                  <div className="flex items-center gap-2">
-                    <Badge className={submissionStatusStyles[s.status]}>{s.status}</Badge>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (confirm("Send this submission back for revision? This clears its marks and feedback.")) {
-                          onStatusChange?.(s, "NeedsRevision");
-                        }
-                      }}
-                      className="text-xs text-slate-500 hover:underline dark:text-slate-400"
-                    >
-                      Send back
-                    </button>
-                  </div>
-                ) : (
-                  <Badge className={submissionStatusStyles[s.status]}>{s.status}</Badge>
-                )}
-              </td>
-              <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
-                {s.marks !== null ? `${s.marks}/${s.maxMarks}` : "—"}
-              </td>
-              {showFeedback && (
-                <td className="max-w-xs truncate px-4 py-3 text-sm text-slate-600 dark:text-slate-400" title={s.feedback ?? undefined}>
-                  {s.feedback ?? "—"}
-                </td>
-              )}
-              {showLastUpdated && (
-                <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
-                  {s.updatedAt ? formatDate(s.updatedAt) : "—"}
-                </td>
-              )}
-              {renderActions && <td className="px-4 py-3 text-right">{renderActions(s)}</td>}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      data={submissions}
+      columns={columns}
+      keyExtractor={(s) => s.id}
+      emptyTitle={emptyTitle}
+      mobileBadge={(s) => (s.status !== "Graded" ? null : <Badge className={submissionStatusStyles[s.status]}>{s.status}</Badge>)}
+    />
   );
 }

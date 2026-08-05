@@ -1,4 +1,6 @@
 import { format, formatDistanceToNow, isPast } from "date-fns";
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 import type { AssignmentStatus, SubmissionStatus } from "./types";
 import type { EntityStatus } from "./admin-analytics";
 
@@ -34,6 +36,10 @@ export const entityStatusStyles: Record<EntityStatus, string> = {
   Empty: "bg-slate-100 text-slate-600 ring-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700",
 };
 
-export function cx(...classes: Array<string | false | null | undefined>): string {
-  return classes.filter(Boolean).join(" ");
+/** shadcn/ui-style class combiner: clsx for conditional classes, tailwind-merge to resolve conflicts. */
+export function cn(...inputs: ClassValue[]): string {
+  return twMerge(clsx(inputs));
 }
+
+/** @deprecated use `cn` — kept as an alias so existing call sites keep working. */
+export const cx = cn;

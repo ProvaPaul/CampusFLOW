@@ -13,7 +13,8 @@ import { useAdminAnalytics } from "@/lib/use-admin-analytics";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Select } from "@/components/ui/Input";
-import { EmptyState, Spinner } from "@/components/ui/Spinner";
+import { EmptyState } from "@/components/ui/Spinner";
+import { SkeletonCard, SkeletonStatCard } from "@/components/ui/Skeleton";
 import { StatCard, StatCardGrid } from "@/components/admin/StatCard";
 import { SubjectCard } from "@/components/admin/SubjectCard";
 
@@ -42,7 +43,22 @@ export default function AdminSubjectsPage() {
     }
   };
 
-  if (loading || !data) return <Spinner />;
+  if (loading || !data) {
+    return (
+      <div className="space-y-6">
+        <StatCardGrid>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonStatCard key={i} />
+          ))}
+        </StatCardGrid>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const classes = data.classes.map((c) => c.classItem);
   const subjects = data.subjects;
@@ -128,11 +144,11 @@ function CreateSubjectModal({
   };
 
   return (
-    <Modal open onClose={onClose} title="Create subject">
+    <Modal open onClose={onClose} title="Create subject" description="Subjects belong to exactly one class/course.">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <Input label="Name" placeholder="e.g. Mathematics" error={errors.name?.message} {...register("name")} />
-        <Input label="Code" placeholder="e.g. MATH101" error={errors.code?.message} {...register("code")} />
-        <Select label="Class" error={errors.classId?.message} {...register("classId")}>
+        <Input label="Name" required placeholder="e.g. Mathematics" error={errors.name?.message} {...register("name")} />
+        <Input label="Code" required placeholder="e.g. MATH101" error={errors.code?.message} {...register("code")} />
+        <Select label="Class" required error={errors.classId?.message} {...register("classId")}>
           <option value="">Select a class</option>
           {classes.map((c) => (
             <option key={c.id} value={c.id}>
@@ -174,8 +190,8 @@ function EditSubjectModal({ item, onClose, onSaved }: { item: SubjectDto; onClos
   return (
     <Modal open onClose={onClose} title="Edit subject">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <Input label="Name" error={errors.name?.message} {...register("name")} />
-        <Input label="Code" error={errors.code?.message} {...register("code")} />
+        <Input label="Name" required error={errors.name?.message} {...register("name")} />
+        <Input label="Code" required error={errors.code?.message} {...register("code")} />
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel

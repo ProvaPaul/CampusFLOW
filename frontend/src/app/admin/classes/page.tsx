@@ -13,7 +13,8 @@ import { useAdminAnalytics } from "@/lib/use-admin-analytics";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Textarea } from "@/components/ui/Input";
-import { EmptyState, Spinner } from "@/components/ui/Spinner";
+import { EmptyState } from "@/components/ui/Spinner";
+import { SkeletonCard, SkeletonStatCard } from "@/components/ui/Skeleton";
 import { StatCard, StatCardGrid } from "@/components/admin/StatCard";
 import { ClassCard } from "@/components/admin/ClassCard";
 
@@ -38,7 +39,22 @@ export default function AdminClassesPage() {
     }
   };
 
-  if (loading || !data) return <Spinner />;
+  if (loading || !data) {
+    return (
+      <div className="space-y-6">
+        <StatCardGrid>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonStatCard key={i} />
+          ))}
+        </StatCardGrid>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const classes = data.classes;
   const emptyClasses = classes.filter((c) => c.status === "Empty").length;
@@ -120,10 +136,11 @@ function ClassFormModal({ initial, onClose, onSaved }: { initial?: ClassDto; onC
   };
 
   return (
-    <Modal open onClose={onClose} title={initial ? "Edit class" : "Create class"}>
+    <Modal open onClose={onClose} title={initial ? "Edit class" : "Create class"} description="Classes group students and subjects together.">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Input
           label="Name"
+          required
           placeholder="e.g. Class 10 - Section A"
           hint={'Tip: add a section/semester after a dash, e.g. "BSc CSE - 3rd Semester" — used to infer academic level and section.'}
           error={errors.name?.message}

@@ -14,7 +14,8 @@ import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input, Textarea } from "@/components/ui/Input";
-import { Spinner } from "@/components/ui/Spinner";
+import { SkeletonCard } from "@/components/ui/Skeleton";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { assignmentStatusStyles, formatDate, isDeadlinePassed, submissionStatusStyles } from "@/lib/utils";
 
 const schema = z.object({
@@ -75,7 +76,14 @@ export default function StudentAssignmentDetailPage() {
     }
   };
 
-  if (loading || !assignment) return <Spinner />;
+  if (loading || !assignment) {
+    return (
+      <div className="space-y-6">
+        <SkeletonCard />
+        <SkeletonCard />
+      </div>
+    );
+  }
 
   const deadlinePassed = isDeadlinePassed(assignment.deadline);
   const canEdit = !submission || (assignment.allowResubmission && !deadlinePassed && submission.status !== "Graded");
@@ -83,6 +91,7 @@ export default function StudentAssignmentDetailPage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[{ label: "My Assignments", href: "/student" }, { label: assignment.title }]} />
       <Card>
         <CardHeader
           title={assignment.title}
@@ -121,7 +130,7 @@ export default function StudentAssignmentDetailPage() {
         <CardBody>
           {canEdit ? (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <Textarea label="Your answer" rows={6} error={errors.answerText?.message} {...register("answerText")} />
+              <Textarea label="Your answer" required rows={6} error={errors.answerText?.message} {...register("answerText")} />
               <Input label="Attachment URL (optional)" placeholder="https://..." error={errors.attachmentUrl?.message} {...register("attachmentUrl")} />
               <div className="flex justify-end">
                 <Button type="submit" loading={isSubmitting}>

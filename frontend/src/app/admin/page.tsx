@@ -1,17 +1,22 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { Users, Layers, BookOpen, ClipboardList, FileEdit, Megaphone, Inbox, CheckCircle2, UserCog } from "lucide-react";
 import { useAdminAnalytics } from "@/lib/use-admin-analytics";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
-import { Spinner } from "@/components/ui/Spinner";
+import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import { StatCard, StatCardGrid } from "@/components/admin/StatCard";
 import { QuickInsights } from "@/components/admin/QuickInsights";
 import { ActivityFeed } from "@/components/admin/ActivityFeed";
+import { DonutChart } from "@/components/admin/charts/DonutChart";
+import { SubmissionTrendChart } from "@/components/admin/charts/SubmissionTrendChart";
+import { ClassActivityChart } from "@/components/admin/charts/ClassActivityChart";
+import { CHART_COLORS } from "@/components/admin/charts/chart-theme";
 
 export default function AdminDashboardPage() {
   const { data, loading } = useAdminAnalytics();
 
-  if (loading || !data) return <Spinner />;
+  if (loading || !data) return <SkeletonDashboard />;
 
   const { global } = data;
 
@@ -46,17 +51,61 @@ export default function AdminDashboardPage() {
         </p>
       </div>
 
-      <StatCardGrid>
-        <StatCard icon={Layers} label="Total Classes" value={global.totalClasses} />
-        <StatCard icon={BookOpen} label="Total Subjects" value={global.totalSubjects} />
-        <StatCard icon={UserCog} label="Total Teachers" value={global.totalTeachers} />
-        <StatCard icon={Users} label="Total Students" value={global.totalStudents} />
-        <StatCard icon={ClipboardList} label="Total Assignments" value={global.totalAssignments} />
-        <StatCard icon={FileEdit} label="Draft Assignments" value={global.draftAssignments} tone="warning" />
-        <StatCard icon={Megaphone} label="Published Assignments" value={global.publishedAssignments} tone="success" />
-        <StatCard icon={Inbox} label="Pending Reviews" value={global.pendingReviews} tone={global.pendingReviews > 0 ? "warning" : "default"} />
-        <StatCard icon={CheckCircle2} label="Completed Submissions" value={global.completedSubmissions} tone="success" />
-      </StatCardGrid>
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={{ visible: { transition: { staggerChildren: 0.04 } } }}
+      >
+        <StatCardGrid>
+          {[
+            { icon: Layers, label: "Total Classes", value: global.totalClasses },
+            { icon: BookOpen, label: "Total Subjects", value: global.totalSubjects },
+            { icon: UserCog, label: "Total Teachers", value: global.totalTeachers },
+            { icon: Users, label: "Total Students", value: global.totalStudents },
+            { icon: ClipboardList, label: "Total Assignments", value: global.totalAssignments },
+            { icon: FileEdit, label: "Draft Assignments", value: global.draftAssignments, tone: "warning" as const },
+            { icon: Megaphone, label: "Published Assignments", value: global.publishedAssignments, tone: "success" as const },
+            {
+              icon: Inbox,
+              label: "Pending Reviews",
+              value: global.pendingReviews,
+              tone: global.pendingReviews > 0 ? ("warning" as const) : ("default" as const),
+            },
+            { icon: CheckCircle2, label: "Completed Submissions", value: global.completedSubmissions, tone: "success" as const },
+          ].map((card) => (
+            <motion.div key={card.label} variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0 } }}>
+              <StatCard {...card} />
+            </motion.div>
+          ))}
+        </StatCardGrid>
+      </motion.div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader title="Assignment Status" description="Draft vs. published across the platform." />
+          <CardBody className="h-56">
+            <DonutChart data={data.charts.assignmentStatus} colors={[CHART_COLORS.emerald, CHART_COLORS.slate]} />
+          </CardBody>
+        </Card>
+        <Card>
+          <CardHeader title="User Distribution" description="Accounts by role." />
+          <CardBody className="h-56">
+            <DonutChart data={data.charts.userDistribution} colors={[CHART_COLORS.indigo, CHART_COLORS.blue, CHART_COLORS.purple]} />
+          </CardBody>
+        </Card>
+        <Card>
+          <CardHeader title="Submission Trends" description="Submissions received over the last 7 days." />
+          <CardBody className="h-56">
+            <SubmissionTrendChart data={data.charts.submissionTrend} />
+          </CardBody>
+        </Card>
+        <Card>
+          <CardHeader title="Class Activity" description="Active (published) assignments per class." />
+          <CardBody className="h-56">
+            <ClassActivityChart data={data.charts.classActivity} />
+          </CardBody>
+        </Card>
+      </div>
 
       <div>
         <h2 className="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100">Quick Insights</h2>
