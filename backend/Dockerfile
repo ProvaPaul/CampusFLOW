@@ -16,7 +16,10 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 
-ENV ASPNETCORE_URLS=http://+:8080
+# Default port for local `docker compose up` (maps to host 5000, see docker-compose.yml).
+# Hosts like Render inject their own PORT env var at runtime — the entrypoint below binds to
+# that instead when present, without requiring any change to the local Docker workflow.
+ENV PORT=8080
 EXPOSE 8080
 
-ENTRYPOINT ["dotnet", "CampusFlow.Api.dll"]
+ENTRYPOINT ["sh", "-c", "ASPNETCORE_URLS=http://+:${PORT} exec dotnet CampusFlow.Api.dll"]

@@ -1,0 +1,38 @@
+# Render Blueprint — one-click deploy for the CampusFlow backend API.
+# Usage: on Render, "New +" -> "Blueprint" -> point at this repository.
+# This is an ADDITIONAL deployment path; it does not affect the local Docker Compose workflow.
+# See the "Deployment" section in README.md for the full walkthrough, including the values
+# Render will prompt for (MongoDB Atlas connection string, allowed CORS origin, etc).
+services:
+  - type: web
+    name: campusflow-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      # MongoDB Atlas connection string, e.g. mongodb+srv://user:pass@cluster.mongodb.net
+      - key: MongoDb__ConnectionString
+        sync: false
+      - key: MongoDb__DatabaseName
+        value: campusflow
+      # Render generates a strong random secret for this — no need to supply one.
+      - key: Jwt__Key
+        generateValue: true
+      - key: Jwt__Issuer
+        value: CampusFlow.Api
+      - key: Jwt__Audience
+        value: CampusFlow.Client
+      - key: Jwt__ExpiryMinutes
+        value: "120"
+      # The deployed frontend origin, e.g. https://campusflow.vercel.app (no trailing slash).
+      - key: Cors__AllowedOrigins__0
+        sync: false
+      # Optional — leave blank to run with AI features disabled (the app degrades gracefully).
+      - key: Ai__ApiKey
+        sync: false
+      - key: Ai__Model
+        value: gemini-2.5-flash

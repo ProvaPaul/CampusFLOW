@@ -24,6 +24,9 @@ Built for the OnnoRokom Projukti Assistant Software Engineer recruitment project
 - [Business rules enforced by the API](#business-rules-enforced-by-the-api)
 - [Assumptions](#assumptions)
 - [Known limitations](#known-limitations)
+- [Deployment](#deployment)
+  - [Option A — Local Docker](#option-a--local-docker-recommended-for-evaluators)
+  - [Option B — Live deployment](#option-b--live-deployment-vercel--render--mongodb-atlas)
 
 ## Overview
 
@@ -347,3 +350,99 @@ weren't fully specified:
   the demo data scale, called out here as a known gap for a larger dataset.
 - No email notifications for new assignments, grading, etc.
 - The frontend doesn't have a dedicated "Sign up" flow by design (see assumptions).
+
+## Deployment
+
+Two ways to run CampusFlow, side by side. **Option A is the primary, required setup** — it's what
+[Quick start](#quick-start-docker-compose) above already gives you, no cloud accounts needed. **Option B**
+is an additional showcase of a real production deployment; it's optional and doesn't replace Option A.
+
+The application code is identical in both cases — every environment-specific value (database
+connection string, JWT secret, allowed CORS origin, AI key, frontend API URL) comes from environment
+variables. Nothing is hardcoded, so moving from local to live deployment is a config change, not a
+code change.
+
+### Option A — Local Docker (recommended for evaluators)
+
+Already covered in full under [Quick start (Docker Compose)](#quick-start-docker-compose):
+
+```bash
+git clone <repo-url> && cd CampusFlow
+docker compose up --build
+```
+
+That's the entire setup — MongoDB, backend, and frontend all start together, indexes and demo data
+are seeded automatically, and everything runs on `localhost`. No MongoDB Atlas account, no Vercel
+account, no Render account required.
+
+(The [Manual setup](#manual-setup) section covers running each piece natively with `dotnet run` /
+`npm run dev` instead of Docker, if you'd rather not use containers at all.)
+
+### Option B — Live deployment (Vercel + Render + MongoDB Atlas)
+
+A production-style deployment: **Vercel** for the Next.js frontend, **Render** for the ASP.NET Core
+API (as a Docker web service, using the same `backend/Dockerfile` as local Docker), and **MongoDB
+Atlas** for the database.
+
+#### 1. Database — MongoDB Atlas
+
+1. Create a free cluster at [mongodb.com/atlas](https://www.mongodb.com/atlas).
+2. Add a database user (username/password) and, under Network Access, allow access from anywhere
+   (`0.0.0.0/0`) — simplest for a PaaS backend with a dynamic IP; tighten this for a real production
+   system.
+3. Copy the connection string from "Connect" → "Drivers" — it looks like
+   `mongodb+srv://<user>:<password>@<cluster>.mongodb.net`.
+4. That's it on the Atlas side — `DbSeeder` creates indexes and seeds demo data against this cluster
+   automatically the first time the backend starts, exactly like it does locally.
+
+#### 2. Backend — Render
+
+The repository includes [`render.yaml`](render.yaml), a Blueprint that provisions the backend as a
+Docker web service in one step:
+
+1. On Render: **New +** → **Blueprint**, point it at this repository.
+2. Render reads `render.yaml` and prompts for the variables marked as secret:
+   - `MongoDb__ConnectionString` — the Atlas connection string from step 1.
+   - `Cors__AllowedOrigins__0` — your Vercel frontend URL (add it after step 3, then redeploy).
+   - `Ai__ApiKey` — optional; leave blank to run with AI features disabled.
+3. Everything else (`Jwt__Key` generation, `MongoDb__DatabaseName`, `ASPNETCORE_ENVIRONMENT`, health
+   check path) is already defined in the Blueprint.
+4. Render builds `backend/Dockerfile` and deploys it. The container listens on Render's injected
+   `PORT` automatically (see the Dockerfile's entrypoint) — no manual port configuration needed.
+5. Once live, confirm it's healthy: `https://<your-service>.onrender.com/` should return
+   `{"service":"CampusFlow API","status":"running"}`, and `/swagger` should load the API docs.
+
+No `render.yaml`? The same service can be created manually in the Render dashboard: **New +** → **Web
+Service** → **Docker**, root directory `backend`, and the same environment variables listed above.
+
+#### 3. Frontend — Vercel
+
+1. On Vercel: **Add New** → **Project**, import this repository, set the root directory to `frontend`.
+2. Vercel auto-detects Next.js — no build command changes needed (`next.config.ts`'s
+   `output: "standalone"` is only used by the Docker build and doesn't affect Vercel's own pipeline).
+3. Add one environment variable in the Vercel project settings:
+   - `NEXT_PUBLIC_API_URL` = your Render backend URL (e.g. `https://campusflow-backend.onrender.com`).
+     Set this *before* the first deploy — Next.js inlines `NEXT_PUBLIC_*` variables at build time.
+4. Deploy. Once live, go back to Render and set `Cors__AllowedOrigins__0` to this Vercel URL, then
+   redeploy the backend so it accepts requests from it.
+
+#### Required environment variables (production)
+
+| Variable | Where | Value |
+|---|---|---|
+| `MongoDb__ConnectionString` | Render | Atlas `mongodb+srv://...` connection string |
+| `MongoDb__DatabaseName` | Render | `campusflow` |
+| `Jwt__Key` | Render | Auto-generated by the Blueprint (or set your own, 32+ random chars) |
+| `Cors__AllowedOrigins__0` | Render | Your Vercel frontend URL |
+| `Ai__ApiKey` | Render | Optional — a [Gemini API key](https://aistudio.google.com/apikey), or leave blank |
+| `NEXT_PUBLIC_API_URL` | Vercel | Your Render backend URL |
+
+#### Notes
+
+- **Swagger stays enabled in production** — this is intentional (see `Program.cs`), so evaluators can
+  explore the live API without needing shell/environment access to flip a setting.
+- **AI features degrade gracefully** — with `Ai__ApiKey` unset, `GET /api/ai/status` returns
+  `{"enabled":false}` and the frontend hides/disables the AI actions instead of erroring. This works
+  identically in local Docker and in production.
+- **CORS** is driven entirely by `Cors__AllowedOrigins__0..N` — add more indexed variables for
+  additional allowed origins (e.g. a Vercel preview URL) if needed.
