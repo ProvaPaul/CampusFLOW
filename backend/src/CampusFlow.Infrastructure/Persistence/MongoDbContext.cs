@@ -25,4 +25,8 @@ public class MongoDbContext
     public IMongoCollection<Assignment> Assignments => _database.GetCollection<Assignment>("assignments");
 
     public IMongoCollection<Submission> Submissions => _database.GetCollection<Submission>("submissions");
+
+    public IMongoCollection<Event> Events => _database.GetCollection<Event>("events");
+
+    public IMongoCollection<Announcement> Announcements => _database.GetCollection<Announcement>("announcements");
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -31,6 +31,13 @@ type UpdateValues = z.infer<typeof updateSchema>;
 export default function AdminSubjectsPage() {
   const { data, loading, reload } = useAdminAnalytics();
   const [modalState, setModalState] = useState<{ mode: "create" } | { mode: "edit"; item: SubjectDto } | null>(null);
+
+  // Supports the global Quick Actions / Command Palette "Create subject" shortcut (?new=1).
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("new") === "1") {
+      setModalState({ mode: "create" });
+    }
+  }, []);
 
   const handleDelete = async (item: SubjectDto) => {
     if (!confirm(`Delete subject "${item.name}"?`)) return;

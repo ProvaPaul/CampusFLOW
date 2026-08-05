@@ -4,6 +4,8 @@ export type AssignmentStatus = "Draft" | "Published";
 
 export type SubmissionStatus = "Submitted" | "Late" | "NeedsRevision" | "Graded";
 
+export type EventType = "Exam" | "Holiday" | "Meeting" | "Other";
+
 export interface UserDto {
   id: string;
   fullName: string;
@@ -13,6 +15,7 @@ export interface UserDto {
   className: string | null;
   isActive: boolean;
   createdAt: string;
+  lastLoginAt: string | null;
 }
 
 export interface AuthResponse {
@@ -89,6 +92,47 @@ export interface SubmissionDto {
   feedback: string | null;
   gradedAt: string | null;
   updatedAt: string | null;
+}
+
+export interface EventDto {
+  id: string;
+  title: string;
+  description: string;
+  type: EventType;
+  startDate: string;
+  endDate: string | null;
+  classId: string | null;
+  className: string | null;
+  createdByUserId: string;
+  createdByName: string;
+  createdAt: string;
+}
+
+export interface AnnouncementDto {
+  id: string;
+  title: string;
+  message: string;
+  targetRole: UserRole | null;
+  createdByUserId: string;
+  createdByName: string;
+  createdAt: string;
+}
+
+export interface AiStatusDto {
+  enabled: boolean;
+}
+
+export interface GeneratedAssignmentDto {
+  title: string;
+  description: string;
+  requirements: string;
+  instructions: string;
+  expectedOutcome: string;
+  gradingRubric: string;
+}
+
+export interface GeneratedFeedbackDto {
+  suggestions: string[];
 }
 
 export interface ApiErrorResponse {

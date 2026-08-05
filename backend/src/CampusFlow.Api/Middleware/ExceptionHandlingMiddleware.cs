@@ -34,6 +34,7 @@ public class ExceptionHandlingMiddleware
             NotFoundException => (HttpStatusCode.NotFound, exception.Message, (IDictionary<string, string[]>?)null),
             ForbiddenException => (HttpStatusCode.Forbidden, exception.Message, null),
             ConflictException => (HttpStatusCode.Conflict, exception.Message, null),
+            AiUnavailableException => (HttpStatusCode.ServiceUnavailable, exception.Message, null),
             ValidationAppException validationEx => (HttpStatusCode.BadRequest, exception.Message, validationEx.Errors),
             InvalidOperationException => (HttpStatusCode.Unauthorized, "You must be logged in to perform this action.", null),
             _ => (HttpStatusCode.InternalServerError, "An unexpected error occurred. Please try again later.", null)

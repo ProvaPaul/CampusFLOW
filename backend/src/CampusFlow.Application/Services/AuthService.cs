@@ -48,6 +48,9 @@ public class AuthService : IAuthService
 
         var token = _jwtTokenGenerator.GenerateToken(user);
 
+        user.LastLoginAt = DateTime.UtcNow;
+        await _userRepository.UpdateAsync(user, ct);
+
         string? className = null;
         if (!string.IsNullOrEmpty(user.ClassId))
         {
@@ -55,7 +58,7 @@ public class AuthService : IAuthService
             className = studentClass?.Name;
         }
 
-        var userDto = new UserDto(user.Id, user.FullName, user.Email, user.Role, user.ClassId, className, user.IsActive, user.CreatedAt);
+        var userDto = new UserDto(user.Id, user.FullName, user.Email, user.Role, user.ClassId, className, user.IsActive, user.CreatedAt, user.LastLoginAt);
 
         _logger.LogInformation("User {Email} logged in successfully", user.Email);
 

@@ -17,6 +17,7 @@ import { Modal } from "@/components/ui/Modal";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/Skeleton";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { SubmissionsTable } from "@/components/shared/SubmissionsTable";
+import { AiFeedbackButton } from "@/components/ai/AiFeedbackButton";
 import { assignmentStatusStyles, formatDate } from "@/lib/utils";
 
 const editSchema = z.object({
@@ -199,11 +200,16 @@ function GradeModal({
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<GradeValues>({
     resolver: zodResolver(gradeSchema),
     defaultValues: { marks: submission.marks != null ? String(submission.marks) : "", feedback: submission.feedback ?? "" },
   });
+
+  const marksValue = watch("marks");
+  const feedbackValue = watch("feedback");
 
   const onSubmit = async (values: GradeValues) => {
     try {
@@ -234,6 +240,13 @@ function GradeModal({
           {...register("marks")}
         />
         <Textarea label="Feedback" error={errors.feedback?.message} {...register("feedback")} />
+        <AiFeedbackButton
+          assignmentTitle={submission.assignmentTitle}
+          answerText={submission.answerText}
+          marks={marksValue ? Number(marksValue) : null}
+          maxMarks={submission.maxMarks}
+          onSelect={(suggestion) => setValue("feedback", feedbackValue ? `${feedbackValue}\n${suggestion}` : suggestion, { shouldValidate: true })}
+        />
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel

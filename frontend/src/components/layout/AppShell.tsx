@@ -1,13 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { GraduationCap, LogOut } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { useNotifications } from "@/lib/notifications";
+import { recordRecentPage } from "@/lib/productivity";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Avatar } from "@/components/ui/Avatar";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { CommandPaletteButton, CommandPaletteProvider } from "@/components/search/CommandPalette";
+import { QuickActionsFab } from "@/components/ui/QuickActionsFab";
+import { WhatsNewBanner } from "@/components/onboarding/WhatsNewBanner";
 
 export interface NavItem {
   href: string;
@@ -41,6 +48,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
 export function AppShell({ navItems, children }: { navItems: NavItem[]; children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
+  const notifications = useNotifications();
 
   // Longest-prefix match: a root item like "/admin" would otherwise also match "/admin/users"
   // (since it's a prefix), highlighting two nav items at once. Only the most specific match wins.
@@ -50,7 +58,14 @@ export function AppShell({ navItems, children }: { navItems: NavItem[]; children
 
   const isActive = (href: string) => href === activeHref;
 
+  useEffect(() => {
+    if (!user) return;
+    const current = navItems.find((item) => item.href === activeHref);
+    if (current) recordRecentPage(user.id, current.href, current.label);
+  }, [user, activeHref, navItems]);
+
   return (
+    <CommandPaletteProvider>
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <div className="flex">
         <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-slate-200 bg-white lg:flex dark:border-slate-800 dark:bg-slate-900">
@@ -59,7 +74,13 @@ export function AppShell({ navItems, children }: { navItems: NavItem[]; children
               <GraduationCap className="h-7 w-7 text-indigo-600 dark:text-indigo-400" />
               <span className="text-lg font-bold text-slate-900 dark:text-slate-100">CampusFlow</span>
             </div>
-            <ThemeToggle />
+            <div className="flex items-center gap-0.5">
+              <NotificationBell {...notifications} />
+              <ThemeToggle />
+            </div>
+          </div>
+          <div className="px-3 pb-3">
+            <CommandPaletteButton />
           </div>
           <nav className="flex-1 space-y-1 px-3">
             {navItems.map((item) => (
@@ -91,6 +112,8 @@ export function AppShell({ navItems, children }: { navItems: NavItem[]; children
               <span className="text-base font-bold text-slate-900 dark:text-slate-100">CampusFlow</span>
             </div>
             <div className="flex items-center gap-1">
+              <CommandPaletteButton />
+              <NotificationBell {...notifications} />
               <ThemeToggle />
               <button onClick={logout} className="text-sm font-medium text-slate-600 dark:text-slate-300">
                 Sign out
@@ -132,6 +155,9 @@ export function AppShell({ navItems, children }: { navItems: NavItem[]; children
           </main>
         </div>
       </div>
+      <QuickActionsFab />
+      <WhatsNewBanner />
     </div>
+    </CommandPaletteProvider>
   );
 }

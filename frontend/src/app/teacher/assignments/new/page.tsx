@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/Button";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { Separator } from "@/components/ui/Separator";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { AiGenerateAssignmentButton } from "@/components/ai/AiGenerateAssignmentButton";
+import type { GeneratedAssignmentDto } from "@/lib/types";
 
 const schema = z.object({
   classId: z.string().min(1, "Select a class"),
@@ -42,6 +44,7 @@ export default function NewAssignmentPage() {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -49,6 +52,8 @@ export default function NewAssignmentPage() {
   });
 
   const selectedClassId = watch("classId");
+  const selectedSubjectId = watch("subjectId");
+  const maxMarksValue = watch("maxMarks");
 
   const uniqueClasses = useMemo(() => {
     if (!myAssignments) return [];
@@ -61,6 +66,23 @@ export default function NewAssignmentPage() {
     () => (myAssignments ?? []).filter((a) => a.classId === selectedClassId),
     [myAssignments, selectedClassId]
   );
+
+  const selectedSubjectName = subjectsForClass.find((a) => a.subjectId === selectedSubjectId)?.subjectName;
+
+  const applyAiDraft = (generated: GeneratedAssignmentDto) => {
+    setValue("title", generated.title, { shouldValidate: true });
+    setValue(
+      "description",
+      [
+        generated.description,
+        `\nRequirements:\n${generated.requirements}`,
+        `\nInstructions:\n${generated.instructions}`,
+        `\nExpected outcome:\n${generated.expectedOutcome}`,
+        `\nGrading rubric:\n${generated.gradingRubric}`,
+      ].join("\n"),
+      { shouldValidate: true }
+    );
+  };
 
   const onSubmit = async (values: FormValues) => {
     try {
@@ -136,7 +158,10 @@ export default function NewAssignmentPage() {
           <Separator />
 
           <div className="space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Details</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Details</p>
+              <AiGenerateAssignmentButton defaultSubject={selectedSubjectName} defaultMaxMarks={maxMarksValue} onApply={applyAiDraft} />
+            </div>
             <Input label="Title" required error={errors.title?.message} {...register("title")} />
             <Textarea label="Description / instructions" required error={errors.description?.message} {...register("description")} />
             <div className="grid grid-cols-2 gap-4">

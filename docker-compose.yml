@@ -25,6 +25,8 @@ services:
       Jwt__Audience: CampusFlow.Client
       Jwt__ExpiryMinutes: "120"
       Cors__AllowedOrigins__0: http://localhost:3000
+      Ai__ApiKey: ${AI_API_KEY:-}
+      Ai__Model: ${AI_MODEL:-gemini-2.5-flash}
     ports:
       - "5000:8080"
 

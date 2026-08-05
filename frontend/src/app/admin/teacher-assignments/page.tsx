@@ -50,6 +50,13 @@ export default function TeacherAssignmentsPage() {
     load();
   }, []);
 
+  // Supports the global Quick Actions / Command Palette "Assign teacher" shortcut (?new=1).
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("new") === "1") {
+      setModalOpen(true);
+    }
+  }, []);
+
   const handleDelete = async (item: TeacherAssignmentDto) => {
     if (!confirm(`Remove ${item.teacherName} from ${item.subjectName} (${item.className})?`)) return;
     try {

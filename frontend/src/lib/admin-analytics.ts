@@ -84,12 +84,46 @@ export interface QuickInsights {
   draftAssignments: AssignmentDto[];
 }
 
+export interface SmartInsights {
+  /** Classes with an established submission rate (has published assignments) below 40%. */
+  lowSubmissionRateClasses: Array<{ classItem: ClassDto; rate: number }>;
+  mostActiveClass: { classItem: ClassDto; submissions: number } | null;
+  mostActiveTeacher: { teacherId: string; teacherName: string; submissions: number } | null;
+  /** Still-Draft assignments whose deadline has already passed — a stronger signal than "no deadline set", which can't happen here since deadline is required. */
+  overdueDraftAssignments: AssignmentDto[];
+}
+
+export interface SystemHealth {
+  totalRecords: number;
+  activeUserCount: number;
+  inactiveUserCount: number;
+  recentLogins: Array<{ user: UserDto; lastLoginAt: Date }>;
+}
+
+export interface LeaderboardEntry {
+  id: string;
+  name: string;
+  metricValue: number;
+  metricSuffix: string;
+  secondaryLabel?: string;
+}
+
+export interface Leaderboards {
+  topClassesBySubmissionRate: LeaderboardEntry[];
+  topTeachersBySubmissions: LeaderboardEntry[];
+  topSubjectsByAverageMarks: LeaderboardEntry[];
+  topStudentsByAverageScore: LeaderboardEntry[];
+}
+
 export interface AdminAnalytics {
   global: GlobalStats;
   subjects: SubjectInsight[];
   classes: ClassInsight[];
   activity: ActivityEvent[];
   insights: QuickInsights;
+  smartInsights: SmartInsights;
+  systemHealth: SystemHealth;
+  leaderboards: Leaderboards;
   charts: ChartData;
 }
 
@@ -333,6 +367,131 @@ export function computeAdminAnalytics(input: ComputeInput): AdminAnalytics {
     draftAssignments,
   };
 
+  const lowSubmissionRateClasses = classInsights
+    .filter((ci): ci is ClassInsight & { averageSubmissionRate: number } => ci.averageSubmissionRate !== null && ci.averageSubmissionRate < 40)
+    .sort((a, b) => a.averageSubmissionRate - b.averageSubmissionRate)
+    .map((ci) => ({ classItem: ci.classItem, rate: ci.averageSubmissionRate }));
+
+  const mostActiveClass = classes.reduce<{ classItem: ClassDto; submissions: number } | null>((best, classItem) => {
+    const total = assignments.filter((a) => a.classId === classItem.id).reduce((sum, a) => sum + a.submissionCount, 0);
+    if (total === 0) return best;
+    if (!best || total > best.submissions) return { classItem, submissions: total };
+    return best;
+  }, null);
+
+  const submissionsByTeacher = new Map<string, number>();
+  assignments.forEach((a) => {
+    submissionsByTeacher.set(a.teacherId, (submissionsByTeacher.get(a.teacherId) ?? 0) + a.submissionCount);
+  });
+  const teacherLeaderboard = Array.from(submissionsByTeacher.entries())
+    .filter(([, submissions]) => submissions > 0)
+    .map(([teacherId, submissions]) => ({
+      teacherId,
+      teacherName: assignments.find((a) => a.teacherId === teacherId)?.teacherName ?? "Unknown",
+      submissions,
+    }))
+    .sort((a, b) => b.submissions - a.submissions);
+  const mostActiveTeacher: SmartInsights["mostActiveTeacher"] = teacherLeaderboard[0] ?? null;
+
+  const overdueDraftAssignments = assignments.filter((a) => a.status === "Draft" && isPast(new Date(a.deadline)));
+
+  const smartInsights: SmartInsights = {
+    lowSubmissionRateClasses,
+    mostActiveClass,
+    mostActiveTeacher,
+    overdueDraftAssignments,
+  };
+
+  const activeUsers = users.filter((u) => u.isActive);
+  const recentLogins = users
+    .filter((u) => u.lastLoginAt)
+    .map((u) => ({ user: u, lastLoginAt: new Date(u.lastLoginAt!) }))
+    .sort((a, b) => b.lastLoginAt.getTime() - a.lastLoginAt.getTime())
+    .slice(0, 6);
+
+  const totalSubmissionCount = Object.values(submissionsByAssignment).reduce((sum, subs) => sum + subs.length, 0);
+
+  const topClassesBySubmissionRate: LeaderboardEntry[] = classInsights
+    .filter((ci) => ci.averageSubmissionRate !== null)
+    .sort((a, b) => (b.averageSubmissionRate ?? 0) - (a.averageSubmissionRate ?? 0))
+    .slice(0, 10)
+    .map((ci) => ({
+      id: ci.classItem.id,
+      name: ci.classItem.name,
+      metricValue: ci.averageSubmissionRate ?? 0,
+      metricSuffix: "%",
+      secondaryLabel: `${ci.totalStudents} student(s)`,
+    }));
+
+  const topTeachersBySubmissions: LeaderboardEntry[] = teacherLeaderboard.slice(0, 10).map((t) => ({
+    id: t.teacherId,
+    name: t.teacherName,
+    metricValue: t.submissions,
+    metricSuffix: " submission(s)",
+  }));
+
+  const gradedSubmissionsBySubject = new Map<string, { totalPercent: number; count: number }>();
+  subjects.forEach((subject) => {
+    const subjectAssignmentIds = new Set(assignments.filter((a) => a.subjectId === subject.id).map((a) => a.id));
+    const graded = Object.entries(submissionsByAssignment)
+      .filter(([assignmentId]) => subjectAssignmentIds.has(assignmentId))
+      .flatMap(([, subs]) => subs)
+      .filter((s) => s.status === "Graded" && s.marks !== null);
+    if (graded.length === 0) return;
+    const totalPercent = graded.reduce((sum, s) => sum + (s.marks! / s.maxMarks) * 100, 0);
+    gradedSubmissionsBySubject.set(subject.id, { totalPercent, count: graded.length });
+  });
+  const topSubjectsByAverageMarks: LeaderboardEntry[] = subjects
+    .map((subject): LeaderboardEntry | null => {
+      const stats = gradedSubmissionsBySubject.get(subject.id);
+      if (!stats) return null;
+      return {
+        id: subject.id,
+        name: subject.name,
+        metricValue: Math.round(stats.totalPercent / stats.count),
+        metricSuffix: "% avg",
+        secondaryLabel: `${stats.count} graded submission(s)`,
+      };
+    })
+    .filter((entry): entry is LeaderboardEntry => entry !== null)
+    .sort((a, b) => b.metricValue - a.metricValue)
+    .slice(0, 10);
+
+  const studentStats = new Map<string, { name: string; totalPercent: number; count: number }>();
+  Object.values(submissionsByAssignment)
+    .flat()
+    .filter((s) => s.status === "Graded" && s.marks !== null)
+    .forEach((s) => {
+      const existing = studentStats.get(s.studentId) ?? { name: s.studentName, totalPercent: 0, count: 0 };
+      existing.totalPercent += (s.marks! / s.maxMarks) * 100;
+      existing.count += 1;
+      studentStats.set(s.studentId, existing);
+    });
+  const topStudentsByAverageScore: LeaderboardEntry[] = Array.from(studentStats.entries())
+    .map(([studentId, stats]) => ({
+      id: studentId,
+      name: stats.name,
+      metricValue: Math.round(stats.totalPercent / stats.count),
+      metricSuffix: "% avg",
+      secondaryLabel: `${stats.count} graded submission(s)`,
+    }))
+    .sort((a, b) => b.metricValue - a.metricValue)
+    .slice(0, 10);
+
+  const leaderboards: Leaderboards = {
+    topClassesBySubmissionRate,
+    topTeachersBySubmissions,
+    topSubjectsByAverageMarks,
+    topStudentsByAverageScore,
+  };
+
+  const systemHealth: SystemHealth = {
+    totalRecords: classes.length + subjects.length + users.length + assignments.length + teacherAssignments.length + totalSubmissionCount,
+    activeUserCount: activeUsers.length,
+    inactiveUserCount: users.length - activeUsers.length,
+    recentLogins,
+  };
+
   const allSubmissions = Object.values(submissionsByAssignment).flat();
   const trendDays = new Map<string, { label: string; count: number }>();
   for (let i = 6; i >= 0; i--) {
@@ -364,5 +523,15 @@ export function computeAdminAnalytics(input: ComputeInput): AdminAnalytics {
     })),
   };
 
-  return { global, subjects: subjectInsights, classes: classInsights, activity: activity.slice(0, 12), insights, charts };
+  return {
+    global,
+    subjects: subjectInsights,
+    classes: classInsights,
+    activity,
+    insights,
+    smartInsights,
+    systemHealth,
+    leaderboards,
+    charts,
+  };
 }

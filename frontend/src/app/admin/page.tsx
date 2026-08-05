@@ -7,7 +7,10 @@ import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import { StatCard, StatCardGrid } from "@/components/admin/StatCard";
 import { QuickInsights } from "@/components/admin/QuickInsights";
+import { SmartAdminInsights } from "@/components/admin/SmartAdminInsights";
+import { SystemHealthPanel } from "@/components/admin/SystemHealthPanel";
 import { ActivityFeed } from "@/components/admin/ActivityFeed";
+import Link from "next/link";
 import { DonutChart } from "@/components/admin/charts/DonutChart";
 import { SubmissionTrendChart } from "@/components/admin/charts/SubmissionTrendChart";
 import { ClassActivityChart } from "@/components/admin/charts/ClassActivityChart";
@@ -108,14 +111,34 @@ export default function AdminDashboardPage() {
       </div>
 
       <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Smart Insights</h2>
+          <Link href="/admin/leaderboards" className="text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+            View leaderboards →
+          </Link>
+        </div>
+        <SmartAdminInsights data={data.smartInsights} />
+      </div>
+
+      <div>
         <h2 className="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100">Quick Insights</h2>
         <QuickInsights data={data.insights} />
       </div>
 
+      <SystemHealthPanel data={data.systemHealth} />
+
       <Card>
-        <CardHeader title="Recent Activity" description="The latest events across the platform." />
+        <CardHeader
+          title="Recent Activity"
+          description="The latest events across the platform."
+          action={
+            <Link href="/admin/timeline" className="text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+              View full timeline →
+            </Link>
+          }
+        />
         <CardBody>
-          <ActivityFeed events={data.activity} />
+          <ActivityFeed events={data.activity.slice(0, 12)} />
         </CardBody>
       </Card>
     </div>

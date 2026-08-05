@@ -4,7 +4,7 @@ import type { QuickInsights as QuickInsightsData } from "@/lib/admin-analytics";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { formatDate } from "@/lib/utils";
 
-function InsightCard({ title, emoji, children }: { title: string; emoji: string; children: React.ReactNode }) {
+export function InsightCard({ title, emoji, children }: { title: string; emoji: string; children: React.ReactNode }) {
   return (
     <Card>
       <CardHeader title={`${emoji} ${title}`} />
@@ -13,7 +13,7 @@ function InsightCard({ title, emoji, children }: { title: string; emoji: string;
   );
 }
 
-function Placeholder({ text }: { text: string }) {
+export function Placeholder({ text }: { text: string }) {
   return <p className="text-slate-400 dark:text-slate-500">{text}</p>;
 }
 

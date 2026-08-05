@@ -59,6 +59,15 @@ public class DbSeeder
 
         await _context.Subjects.Indexes.CreateOneAsync(
             new CreateIndexModel<Subject>(Builders<Subject>.IndexKeys.Ascending(s => s.ClassId)));
+
+        await _context.Events.Indexes.CreateManyAsync(new[]
+        {
+            new CreateIndexModel<Event>(Builders<Event>.IndexKeys.Ascending(e => e.ClassId)),
+            new CreateIndexModel<Event>(Builders<Event>.IndexKeys.Ascending(e => e.StartDate)),
+        });
+
+        await _context.Announcements.Indexes.CreateOneAsync(
+            new CreateIndexModel<Announcement>(Builders<Announcement>.IndexKeys.Ascending(a => a.TargetRole)));
     }
 
     public async Task SeedAsync()
@@ -234,7 +243,50 @@ public class DbSeeder
 
         await _context.Submissions.InsertManyAsync(submissions);
 
-        _logger.LogInformation("Demo data seeded: {Classes} classes, {Subjects} subjects, {Users} users, {Assignments} assignments, {Submissions} submissions",
-            2, 5, 6, 4, submissions.Length);
+        var events = new[]
+        {
+            new Event
+            {
+                Title = "Mid-term Examinations Begin",
+                Description = "Mid-term examinations for all classes begin. Check your class schedule for exact timings.",
+                Type = EventType.Exam,
+                StartDate = DateTime.UtcNow.AddDays(14),
+                EndDate = DateTime.UtcNow.AddDays(18),
+                ClassId = null,
+                CreatedByUserId = admin.Id
+            },
+            new Event
+            {
+                Title = "National Holiday",
+                Description = "Campus closed for a national holiday.",
+                Type = EventType.Holiday,
+                StartDate = DateTime.UtcNow.AddDays(9),
+                ClassId = null,
+                CreatedByUserId = admin.Id
+            },
+            new Event
+            {
+                Title = "Parent-Teacher Meeting",
+                Description = "Section A parent-teacher meeting to discuss mid-term progress.",
+                Type = EventType.Meeting,
+                StartDate = DateTime.UtcNow.AddDays(20),
+                ClassId = classA.Id,
+                CreatedByUserId = admin.Id
+            }
+        };
+        await _context.Events.InsertManyAsync(events);
+
+        var announcement = new Announcement
+        {
+            Title = "Welcome to CampusFlow",
+            Message = "This platform is now the primary place to publish assignments, submit work, and track grades. Reach out to your class teacher with any questions.",
+            TargetRole = null,
+            CreatedByUserId = admin.Id
+        };
+        await _context.Announcements.InsertOneAsync(announcement);
+
+        _logger.LogInformation(
+            "Demo data seeded: {Classes} classes, {Subjects} subjects, {Users} users, {Assignments} assignments, {Submissions} submissions, {Events} events",
+            2, 5, 6, 4, submissions.Length, events.Length);
     }
 }

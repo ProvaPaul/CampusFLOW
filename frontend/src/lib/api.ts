@@ -1,9 +1,15 @@
 import { apiClient } from "./api-client";
 import type {
+  AiStatusDto,
+  AnnouncementDto,
   AssignmentDto,
   AssignmentStatus,
   AuthResponse,
   ClassDto,
+  EventDto,
+  EventType,
+  GeneratedAssignmentDto,
+  GeneratedFeedbackDto,
   SubjectDto,
   SubmissionDto,
   SubmissionStatus,
@@ -113,4 +119,35 @@ export const submissionsApi = {
     apiClient.patch<SubmissionDto>(`/api/submissions/${id}/grade`, payload).then((r) => r.data),
   updateStatus: (id: string, status: SubmissionStatus) =>
     apiClient.patch<SubmissionDto>(`/api/submissions/${id}/status`, { status }).then((r) => r.data),
+};
+
+export interface CreateEventPayload {
+  title: string;
+  description: string;
+  type: EventType;
+  startDate: string;
+  endDate?: string | null;
+  classId?: string | null;
+}
+
+export const eventsApi = {
+  getAll: () => apiClient.get<EventDto[]>("/api/events").then((r) => r.data),
+  create: (payload: CreateEventPayload) => apiClient.post<EventDto>("/api/events", payload).then((r) => r.data),
+  update: (id: string, payload: CreateEventPayload) => apiClient.put<EventDto>(`/api/events/${id}`, payload).then((r) => r.data),
+  remove: (id: string) => apiClient.delete(`/api/events/${id}`),
+};
+
+export const announcementsApi = {
+  getAll: () => apiClient.get<AnnouncementDto[]>("/api/announcements").then((r) => r.data),
+  create: (payload: { title: string; message: string; targetRole?: UserRole | null }) =>
+    apiClient.post<AnnouncementDto>("/api/announcements", payload).then((r) => r.data),
+  remove: (id: string) => apiClient.delete(`/api/announcements/${id}`),
+};
+
+export const aiApi = {
+  status: () => apiClient.get<AiStatusDto>("/api/ai/status").then((r) => r.data),
+  generateAssignment: (payload: { subject: string; topic: string; difficulty: string; maxMarks: number; learningObjective: string }) =>
+    apiClient.post<GeneratedAssignmentDto>("/api/ai/generate-assignment", payload).then((r) => r.data),
+  generateFeedback: (payload: { assignmentTitle: string; answerText: string; marks?: number | null; maxMarks: number }) =>
+    apiClient.post<GeneratedFeedbackDto>("/api/ai/generate-feedback", payload).then((r) => r.data),
 };

@@ -1,5 +1,6 @@
 using CampusFlow.Application.Interfaces.Infrastructure;
 using CampusFlow.Application.Interfaces.Repositories;
+using CampusFlow.Infrastructure.Ai;
 using CampusFlow.Infrastructure.Persistence;
 using CampusFlow.Infrastructure.Repositories;
 using CampusFlow.Infrastructure.Security;
@@ -15,6 +16,7 @@ public static class DependencyInjection
     {
         services.Configure<MongoDbSettings>(configuration.GetSection(MongoDbSettings.SectionName));
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
+        services.Configure<AiSettings>(configuration.GetSection(AiSettings.SectionName));
 
         services.AddSingleton<MongoDbContext>();
 
@@ -24,9 +26,17 @@ public static class DependencyInjection
         services.AddScoped<ITeacherAssignmentRepository, TeacherAssignmentRepository>();
         services.AddScoped<IAssignmentRepository, AssignmentRepository>();
         services.AddScoped<ISubmissionRepository, SubmissionRepository>();
+        services.AddScoped<IEventRepository, EventRepository>();
+        services.AddScoped<IAnnouncementRepository, AnnouncementRepository>();
 
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+
+        services.AddHttpClient<IAiProvider, GeminiAiProvider>(client =>
+        {
+            client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
 
         services.AddScoped<DbSeeder>();
 

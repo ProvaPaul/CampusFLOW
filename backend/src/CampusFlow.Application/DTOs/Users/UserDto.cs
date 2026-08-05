@@ -10,4 +10,5 @@ public record UserDto(
     string? ClassId,
     string? ClassName,
     bool IsActive,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    DateTime? LastLoginAt);

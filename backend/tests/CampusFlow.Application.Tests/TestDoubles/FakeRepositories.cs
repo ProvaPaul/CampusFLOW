@@ -28,3 +28,11 @@ public class FakeAssignmentRepository : InMemoryRepository<Assignment>, IAssignm
 public class FakeSubmissionRepository : InMemoryRepository<Submission>, ISubmissionRepository
 {
 }
+
+public class FakeEventRepository : InMemoryRepository<Event>, IEventRepository
+{
+}
+
+public class FakeAnnouncementRepository : InMemoryRepository<Announcement>, IAnnouncementRepository
+{
+}

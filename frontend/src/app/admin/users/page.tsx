@@ -20,6 +20,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Pagination } from "@/components/ui/Pagination";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuIconTrigger } from "@/components/ui/DropdownMenu";
+import { ExportMenu } from "@/components/export/ExportMenu";
 
 const createUserSchema = z.object({
   fullName: z.string().min(2, "Full name is required"),
@@ -70,6 +71,13 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     load();
+  }, []);
+
+  // Supports the global Quick Actions / Command Palette "Invite user" shortcut (?new=1).
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("new") === "1") {
+      setCreateOpen(true);
+    }
   }, []);
 
   const handleDelete = async (user: UserDto) => {
@@ -157,9 +165,23 @@ export default function AdminUsersPage() {
           <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Users</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Manage Admin, Teacher and Student accounts.</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="h-4 w-4" /> New user
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportMenu
+            filenameBase="users"
+            title="Users"
+            columns={[
+              { header: "Name", accessor: (u: UserDto) => u.fullName },
+              { header: "Email", accessor: (u: UserDto) => u.email },
+              { header: "Role", accessor: (u: UserDto) => u.role },
+              { header: "Class", accessor: (u: UserDto) => u.className ?? "" },
+              { header: "Status", accessor: (u: UserDto) => (u.isActive ? "Active" : "Inactive") },
+            ]}
+            rows={filtered}
+          />
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4" /> New user
+          </Button>
+        </div>
       </div>
 
       {!users ? (

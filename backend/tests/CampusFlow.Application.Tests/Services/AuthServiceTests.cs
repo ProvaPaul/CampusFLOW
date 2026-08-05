@@ -43,6 +43,24 @@ public class AuthServiceTests
     }
 
     [Fact]
+    public async Task LoginAsync_WithValidCredentials_RecordsLastLoginAt()
+    {
+        var user = new User
+        {
+            Email = "student2@campusflow.edu",
+            PasswordHash = _passwordHasher.Hash("Student@123"),
+            Role = UserRole.Student,
+            IsActive = true
+        };
+        _userRepository.Seed(user);
+
+        var result = await _sut.LoginAsync(new LoginRequest(user.Email, "Student@123"));
+
+        result.User.LastLoginAt.Should().NotBeNull();
+        (await _userRepository.GetByIdAsync(user.Id))!.LastLoginAt.Should().Be(result.User.LastLoginAt);
+    }
+
+    [Fact]
     public async Task LoginAsync_WithWrongPassword_ThrowsValidationAppException()
     {
         var user = new User

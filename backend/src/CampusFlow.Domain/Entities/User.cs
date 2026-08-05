@@ -21,4 +21,7 @@ public class User : BaseEntity
     public string? ClassId { get; set; }
 
     public bool IsActive { get; set; } = true;
+
+    /// <summary>Set on every successful login — powers the admin System Health "recent logins" view.</summary>
+    public DateTime? LastLoginAt { get; set; }
 }

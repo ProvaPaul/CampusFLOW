@@ -12,6 +12,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/Skeleton";
 import { SubmissionsTable } from "@/components/shared/SubmissionsTable";
+import { ExportMenu } from "@/components/export/ExportMenu";
 import { assignmentStatusStyles, formatDate } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
@@ -23,6 +24,8 @@ export default function AdminAssignmentSubmissionsPage() {
   const [submissions, setSubmissions] = useState<SubmissionDto[] | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<SubmissionStatus | "All">("All");
+  const [minMarks, setMinMarks] = useState("");
+  const [maxMarks, setMaxMarks] = useState("");
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -39,9 +42,11 @@ export default function AdminAssignmentSubmissionsPage() {
       const matchesSearch =
         !query || s.studentName.toLowerCase().includes(query) || s.studentEmail.toLowerCase().includes(query);
       const matchesStatus = statusFilter === "All" || s.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesMinMarks = !minMarks || (s.marks !== null && s.marks >= Number(minMarks));
+      const matchesMaxMarks = !maxMarks || (s.marks !== null && s.marks <= Number(maxMarks));
+      return matchesSearch && matchesStatus && matchesMinMarks && matchesMaxMarks;
     });
-  }, [submissions, search, statusFilter]);
+  }, [submissions, search, statusFilter, minMarks, maxMarks]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -78,7 +83,24 @@ export default function AdminAssignmentSubmissionsPage() {
       </Card>
 
       <Card>
-        <CardHeader title="Submissions" description="Read-only view — monitoring only. Grading is done by the assignment's teacher." />
+        <CardHeader
+          title="Submissions"
+          description="Read-only view — monitoring only. Grading is done by the assignment's teacher."
+          action={
+            <ExportMenu
+              filenameBase={`${assignment.title.toLowerCase().replace(/\s+/g, "-")}-submissions`}
+              title={`Submissions — ${assignment.title}`}
+              columns={[
+                { header: "Student", accessor: (s: SubmissionDto) => s.studentName },
+                { header: "Email", accessor: (s: SubmissionDto) => s.studentEmail },
+                { header: "Status", accessor: (s: SubmissionDto) => s.status },
+                { header: "Marks", accessor: (s: SubmissionDto) => s.marks ?? "" },
+                { header: "Submitted", accessor: (s: SubmissionDto) => formatDate(s.submittedAt) },
+              ]}
+              rows={filtered}
+            />
+          }
+        />
         <CardBody className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <SearchInput
@@ -104,6 +126,31 @@ export default function AdminAssignmentSubmissionsPage() {
                 </option>
               ))}
             </Select>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                value={minMarks}
+                onChange={(e) => {
+                  setMinMarks(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Min marks"
+                aria-label="Minimum marks"
+                className="w-24 rounded-md border-0 py-1.5 text-sm text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700 dark:placeholder:text-slate-500"
+              />
+              <span className="text-slate-400">–</span>
+              <input
+                type="number"
+                value={maxMarks}
+                onChange={(e) => {
+                  setMaxMarks(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Max marks"
+                aria-label="Maximum marks"
+                className="w-24 rounded-md border-0 py-1.5 text-sm text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700 dark:placeholder:text-slate-500"
+              />
+            </div>
           </div>
 
           <SubmissionsTable

@@ -1,10 +1,14 @@
 "use client";
 
-import { LayoutDashboard } from "lucide-react";
+import { LayoutDashboard, CalendarDays, BarChart3 } from "lucide-react";
 import { RoleGuard } from "@/components/layout/RoleGuard";
 import { AppShell, NavItem } from "@/components/layout/AppShell";
 
-const navItems: NavItem[] = [{ href: "/student", label: "My Assignments", icon: LayoutDashboard }];
+const navItems: NavItem[] = [
+  { href: "/student", label: "My Assignments", icon: LayoutDashboard },
+  { href: "/student/calendar", label: "Calendar", icon: CalendarDays },
+  { href: "/student/analytics", label: "Analytics", icon: BarChart3 },
+];
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
   return (

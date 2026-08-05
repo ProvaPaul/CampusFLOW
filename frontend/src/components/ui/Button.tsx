@@ -36,7 +36,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       whileTap={disabled || loading ? undefined : { scale: 0.97 }}
       transition={{ duration: 0.1 }}
       className={cn(
-        "inline-flex items-center justify-center gap-1.5 rounded-lg font-semibold shadow-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:shadow-none",
+        "inline-flex items-center justify-center gap-1.5 rounded-lg font-semibold shadow-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:shadow-none disabled:opacity-50",
         variantClasses[variant],
         sizeClasses[size],
         className

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -27,6 +27,13 @@ type ClassValues = z.infer<typeof classSchema>;
 export default function AdminClassesPage() {
   const { data, loading, reload } = useAdminAnalytics();
   const [modalState, setModalState] = useState<{ mode: "create" } | { mode: "edit"; item: ClassDto } | null>(null);
+
+  // Supports the global Quick Actions / Command Palette "Create class" shortcut (?new=1).
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("new") === "1") {
+      setModalState({ mode: "create" });
+    }
+  }, []);
 
   const handleDelete = async (item: ClassDto) => {
     if (!confirm(`Delete class "${item.name}"?`)) return;
