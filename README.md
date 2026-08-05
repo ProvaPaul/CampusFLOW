@@ -22,7 +22,8 @@ end-to-end (login, dashboards, CORS). See [Demo credentials](#demo-credentials) 
 This is the primary, required setup — no cloud accounts needed.
 
 ```bash
-git clone <repo-url> && cd CampusFlow
+git clone https://github.com/ProvaPaul/CampusFLOW
+cd CampusFlow
 docker compose up --build
 ```
 
